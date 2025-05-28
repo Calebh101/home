@@ -1,0 +1,8 @@
+#!/bin/bash
+# home bin runner version 1.0.0A
+
+SCRIPTPATH="$(realpath "$0")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PARENT_DIR="$(dirname "$SCRIPT_DIR")"
+
+"$PARENT_DIR/tools/buildall.sh" "$@"

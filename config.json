@@ -1,0 +1,60 @@
+{
+    "version": "1.1.1A",
+    "notes": [
+        "Every time number in server is in seconds",
+        "Time values in nightmode start at 0"
+    ],
+    "limits": {
+        "maxvolume": 80
+    },
+    "server": {
+        "enable": {
+            "enabled": true,
+            "reason": ""
+        },
+        "shutdowndelay": 30,
+        "statedumpinterval": 0.25
+    },
+    "nightmode": {
+        "enable": false,
+        "start": {
+            "hour": 23,
+            "minute": 0
+        },
+        "end": {
+            "hour": 7,
+            "minute": 0
+        }
+    },
+    "glucose": {
+        "low": {
+            "show": 90,
+            "warning": 70,
+            "critical": 55
+        },
+        "high": {
+            "show": 150,
+            "warning": 180,
+            "critical": 240
+        },
+        "colorOnSlowTrend": true,
+        "timeBuffer": 15
+    },
+    "fireplaces": [
+        {
+            "name": "Generic Fireplace #1",
+            "id": 1,
+            "file": "fireplace1.mp4"
+        },
+        {
+            "name": "Generic Fireplace #2",
+            "id": 2,
+            "file": "fireplace2.mp4"
+        },
+        {
+            "name": "Christmas Fireplace #1",
+            "id": 3,
+            "file": "christmas1.mp4"
+        }
+    ]
+}

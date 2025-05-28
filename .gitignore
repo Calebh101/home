@@ -1,0 +1,16 @@
+logs/**
+temp/**
+cert/**
+frames/**
+node_modules/**
+
+.env
+debug.log
+
+server/data.json
+server/tvs.json
+server/homekit-pairing.json
+server/homekit-data.json
+server/calendar.json
+server/house.json
+tools/countlines.dart

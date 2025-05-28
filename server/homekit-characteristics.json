@@ -1,0 +1,79 @@
+{
+    "ecobee3": [
+        {
+            "id": "1.3",
+            "code": "manufacturer",
+            "units": "string"
+        },
+        {
+            "id": "1.5",
+            "code": "model",
+            "units": "string"
+        },
+        {
+            "id": "1.2",
+            "code": "name",
+            "units": "string"
+        },
+        {
+            "id": "1.4",
+            "code": "serial",
+            "units": "string"
+        },
+        {
+            "id": "1.8",
+            "code": "firmware.revision",
+            "units": "string"
+        },
+        {
+            "id": "1.31",
+            "code": "version",
+            "units": "string"
+        },
+        {
+            "id": "1.17",
+            "code": "heating-cooling.current",
+            "units": "int"
+        },
+        {
+            "id": "1.18",
+            "code": "heating-cooling.target",
+            "units": "int"
+        },
+        {
+            "id": "1.19",
+            "code": "temp.current",
+            "units": "celsius"
+        },
+        {
+            "id": "1.20",
+            "code": "temp.target",
+            "units": "celsius"
+        },
+        {
+            "id": "1.22",
+            "code": "cooling.threshold",
+            "units": "celsius"
+        },
+        {
+            "id": "1.23",
+            "code": "heating.threshold",
+            "units": "celsius"
+        },
+        {
+            "id": "1.24",
+            "code": "humidity",
+            "units": "percent"
+        },
+        {
+            "id": "1.76",
+            "code": "fan.current",
+            "units": "int"
+        },
+        {
+            "id": "1.75",
+            "code": "fan.target",
+            "units": "int"
+        }
+    ]
+}
