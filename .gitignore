@@ -13,4 +13,3 @@ server/homekit-pairing.json
 server/homekit-data.json
 server/calendar.json
 server/house.json
-tools/countlines.dart

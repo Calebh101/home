@@ -2,22 +2,36 @@
 # V. 1.0.0A
 
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
-dart run $SCRIPT_DIR/codetest.dart
+root="/var/www/home"
+NO_APP_BUILD_PRESENT=false
 
+for arg in "$@"; do
+    if [[ "$arg" == "--no-app-build" ]]; then
+        NO_APP_BUILD_PRESENT=true
+        break
+    fi
+done
+
+dart run $SCRIPT_DIR/codetest.dart
 echo "Starting build and deploy"
-cd /var/www/home/app
+cd "$root/app"
 
 if [ $? -ne 0 ]; then
     exit 1
 fi
 
 echo "Building..."
-flutter build web
-flutter build linux
+dart compile exe "$root/tools/countlines.dart" -o "$root/build/countlines"
+if ! $NO_APP_BUILD_PRESENT; then
+    flutter build web
+    flutter build linux
+fi
 
 echo "Deploying..."
-../tools/deployweb.sh
-../tools/deployapp.sh
+if ! $NO_APP_BUILD_PRESENT; then
+    ../tools/deployweb.sh
+    ../tools/deployapp.sh
+fi
 
 echo "Build and deploy complete"
 exit 0
