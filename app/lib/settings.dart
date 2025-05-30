@@ -264,6 +264,79 @@ class _DeviceInfoState extends State<DeviceInfo> {
                 showDialogue(context: context, title: "Why is there no app version?", content: Text("This can happen if the app is not currently running on the host. The app must be running to query the app info."));
               }
             }),
+            SettingTitle(title: "Code Stats"),
+            Setting(title: "Total lines", text: "${data!["code"]["lines"]}"),
+            Setting(title: "Total files", text: "${data!["code"]["files"]}"),
+            Setting(title: "Total languages", text: "${data!["code"]["totalLanguages"]}", desc: "${data!["code"]["languages"].keys.join(", ")}"),
+            Setting(title: "See More", desc: "See more code stats.", action: () {
+              showDialogue(context: context, title: "Code Stats", content: DeviceInfoCodeStats(data: data!["code"]));
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DeviceInfoCodeStats extends StatefulWidget {
+  final Map data;
+  const DeviceInfoCodeStats({super.key, required this.data});
+
+  @override
+  State<DeviceInfoCodeStats> createState() => _DeviceInfoCodeStatsState();
+}
+
+class _DeviceInfoCodeStatsState extends State<DeviceInfoCodeStats> {
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Center(
+        child: Column(
+          children: [
+            SettingTitle(title: "General Stats"),
+            Setting(title: "Total lines", text: "${widget.data["lines"]}"),
+            Setting(title: "Total files", text: "${widget.data["files"]}"),
+            Setting(title: "Total languages", text: "${widget.data["totalLanguages"]}", desc: "${widget.data["languages"].keys.join(", ")}"),
+            ...List.generate(widget.data["languages"].keys.length, (int i) {
+              String language = widget.data["languages"].keys.toList()[i];
+              Map data = widget.data["languages"][language];
+              return Column(
+                children: [
+                  SettingTitle(title: language),
+                  Setting(title: "Total lines", text: "${data["lines"]}"),
+                  Setting(title: "Total files", text: "${data["totalFiles"]}", action: () {
+                    showDialogue(context: context, title: "$language Files", content: DeviceInfoCodeStatsExpandedView(language: language, data: data));
+                  }),
+                ],
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DeviceInfoCodeStatsExpandedView extends StatefulWidget {
+  final String language;
+  final Map data;
+  const DeviceInfoCodeStatsExpandedView({super.key, required this.language, required this.data});
+
+  @override
+  State<DeviceInfoCodeStatsExpandedView> createState() => _DeviceInfoCodeStatsExpandedViewState();
+}
+
+class _DeviceInfoCodeStatsExpandedViewState extends State<DeviceInfoCodeStatsExpandedView> {
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Center(
+        child: Column(
+          children: [
+            ...List.generate(widget.data["files"].length, (int i) {
+              Map file = widget.data["files"][i];
+              return Setting(title: "${file["file"].split("/").last}", text: "${file["lines"]} Lines");
+            }),
           ],
         ),
       ),

@@ -29,6 +29,13 @@ let httpsserver;
 print("starting server... (https: " + secure + ")");
 require('./socket').init();
 
+try {
+  getData();
+} catch (e) {
+  warn("getData error: " + e);
+  saveData({});
+}
+
 if (!fs.existsSync(serverdir + '/data.json')) {
   print("creating data.json");
   fs.writeFileSync(serverdir + '/data.json', "{}", { flag: 'wx' });

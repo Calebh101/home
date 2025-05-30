@@ -37,8 +37,11 @@ dependencies:
 
   localpkg:
     git:
-      url: https://github.com/Calebh101/localpkg-flutter
+      url: https://github.com/Calebh101/localpkg-flutter.git
       ref: main
+  
+  device_policy_controller:
+    path: lib_plugins/device_policy_controller
 
   number_pad_keyboard: ^0.0.6
   shared_preferences: ^2.5.3
@@ -48,6 +51,7 @@ dependencies:
   battery_plus: ^6.2.1
   network_info_plus: ^6.1.4
   geolocator: ^14.0.0
+  device_info_plus: ^11.4.0
 
 dev_dependencies:
   flutter_test:

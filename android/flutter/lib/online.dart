@@ -1,17 +1,15 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:battery_plus/battery_plus.dart';
-import 'package:flutter/material.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:device_policy_controller/device_policy_controller.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:homeapp_android_host/main.dart';
 import 'package:http/http.dart' as http;
-import 'package:localpkg/dialogue.dart';
 import 'package:localpkg/logger.dart';
 import 'package:network_info_plus/network_info_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 bool secureWebsocket = true;
@@ -24,8 +22,10 @@ enum Host {
   forceDebugIgnore,
 }
 
-Future<void> init(String? id) async {
-  int port = (await request(endpoint: 'system/status'))!["socket"]["port"];
+// Initialize the socket.
+Future<void> init(String? id, {required HomeState widget}) async {
+  // Get the socket port and URL.
+  int port = 3000;
   String url = '${getBaseUrl(websocket: true)}:$port';
   print("building socket... (url: $url)");
 
@@ -34,6 +34,7 @@ Future<void> init(String? id) async {
     return;
   }
 
+  // Create the socket.
   io.Socket socket = io.io(url, io.OptionBuilder()
     .setTransports(['websocket'])
     .setPath('/dashboardstate')
@@ -47,9 +48,18 @@ Future<void> init(String? id) async {
   });
 
   socket.on('update', (data) {
-    if (data.containsKey("error")) {
+    if (data.containsKey("error")) { // Error, tell the user
       warn("socket error: ${data["error"]}");
       if (data["code"] == "dev-id-invalid") globalerror = "Invalid device ID.";
+    } else if (data.containsKey("action")) { // Action, like sleep or wake
+      String action = data["action"];
+      print("action received: $action");
+
+      switch (action) {
+        case "sleep": widget.sleep(); break;
+        case "wake": widget.wakeup(); break;
+        case "lock": lock(); break;
+      }
     }
   });
 
@@ -62,21 +72,46 @@ Future<void> init(String? id) async {
   });
 
   Timer.periodic(Duration(milliseconds: stateUpdateInterval), (Timer timer) async {
+    // Once per specified interval, get and send the current state.
     Map data = await getState();
     if (verbose) print("verbose: pushing state...");
     socket.emit("update", data);
   });
 
+  // Every 10 minutes, update location.
   Timer.periodic(Duration(minutes: 10), (Timer timer) async {
     getLocation();
   });
 }
 
+// Lock the device using Device Policy Controller. Needs Device Admin. (Device Owner isn't necessary.)
+Future<void> lock() async {
+  try {
+    print('locking device...');
+    DevicePolicyController dpc = DevicePolicyController.instance;
+    print("locking device...");
+    bool locked = await dpc.lockDevice(); // Try to lock the device.
+
+    if (locked) {
+      print("device policy controller: device locked");
+    } else {
+      warn("device policy controller: device not locked");
+    }
+  } catch (e) {
+    warn("device policy controller: device not locked: $e"); // Failed to lock the device, probably due to permissions.
+  }
+}
+
+// Get the state of the device.
 Future<Map> getState() async {
   try {
     Battery battery = Battery();
-    MethodChannel platform = MethodChannel('com.calebh101.homeapphost.channel');
+    MethodChannel platform = MethodChannel('com.calebh101.homeapphost.channel'); // For getting device stats like temperature.
     NetworkInfo info = NetworkInfo();
+    //DevicePolicyController dpc = DevicePolicyController.instance;
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+    AndroidBuildVersion androidVersion = androidInfo.version;
 
     return {
       "lastUpdated": DateTime.now().toUtc().toIso8601String(),
@@ -87,16 +122,47 @@ Future<Map> getState() async {
       "admin": {
         "adminLocked": locked,
         "dashboardLocked": lockDashboard ? entireDashboardLocked : null,
-        "awake": opacity == 0,
+        "appawake": opacity == 0,
       },
-      "hardware": {
-        "temps": {
-          "battery": await platform.invokeMethod('getBatteryTemperature'), // degrees celsius
-        },
-        "memory": await platform.invokeMethod('getMemoryInfo'), // megabytes
+      "temps": {
+        "battery": await platform.invokeMethod('getBatteryTemperature'), // degrees celsius
+      },
+      "memory": {
+        "available": androidInfo.availableRamSize, // megabytes
+        "total": androidInfo.physicalRamSize, // megabytes
+        "low": androidInfo.isLowRamDevice,
+      },
+      "model": {
+        "model": androidInfo.model,
+        "manufacturer": androidInfo.manufacturer,
+        "board": androidInfo.board,
+        "brand": androidInfo.brand,
+        "device": androidInfo.device,
+        "display": androidInfo.display,
+        "fingerprint": androidInfo.fingerprint,
+        "hardware": androidInfo.hardware,
+        "host": androidInfo.host,
+        "type": androidInfo.type,
+        "physical": androidInfo.isPhysicalDevice,
+      },
+      "device": {
+        "name": androidInfo.name,
+        //"serial": androidInfo.serialNumber,
+        "id": androidInfo.id,
+        "tags": androidInfo.tags,
+        "features": androidInfo.systemFeatures,
+      },
+      "version": {
+        "base": androidVersion.baseOS,
+        "codename": androidVersion.codename,
+        "incremental": androidVersion.incremental,
+        "release": androidVersion.release,
+        "patch": androidVersion.securityPatch,
+        "sdk": androidVersion.sdkInt,
+        "previewSdk": androidVersion.previewSdkInt,
       },
       "info": {
-        "app": version,
+        "version": version,
         "debug": debug,
       },
       "network": {
@@ -105,12 +171,13 @@ Future<Map> getState() async {
       },
       "location": location,
     };
-  } catch (e) {
+  } catch (e, stackTrace) {
     warn("state error: $e");
-    return {"error": "$e"};
+    return {"error": "$e", "stack": "$stackTrace".replaceAll("  ", " ").replaceAll("  ", " ").replaceAll("  ", " ")};
   }
 }
 
+// Get the current GPS location and return it.
 Future<Map?> getLocation() async {
   print("location: starting...");
   bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -148,48 +215,6 @@ Future<Map?> getLocation() async {
 
 String getBaseUrl({bool websocket = false}) {
   return debug ? "${websocket && secureWebsocket ? "wss" : "http"}://192.168.0.21" : "${websocket && secureWebsocket ? "wss" : (websocket ? "http" : "https")}://home.calebh101.com";
-}
-
-Future<Map?> request({required String endpoint, Map<String, String>? headers, Map? body, BuildContext? context, String action = "complete action", Host? host, bool showError = true, bool silentLogging = false}) async {
-  String baseurl = getBaseUrl();
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  headers ??= {'Content-Type': 'application/json', 'authentication': prefs.getString("accessCode") ?? "null"};
-  body ??= {};
-
-  Uri url = Uri.parse("$baseurl/api/$endpoint");
-  if (silentLogging == false || verbose) print("request: requesting url $url with body $body");
-
-  try {
-    http.Response response = await http.post(
-      url,
-      headers: headers,
-      body: jsonEncode(body),
-    );
-
-    Map result = jsonDecode(response.body);
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      if (silentLogging == false || verbose == true) print('response data (url: $url): $result');
-      return result;
-    } else if (isInvalidPasswordResponse(response, result)) {
-      globalerror = "Invalid access code.";
-    } else {
-      if (result.containsKey('error')) {
-        warn('response error: $result', code: "${response.statusCode}");
-      } else {
-        warn('response error', code: "${response.statusCode}");
-      }
-      if (showError && context != null) {
-        showSnackBar(context, "Unable to $action. Please try again later.");
-      }
-    }
-  } catch (e) {
-    warn('send error: $e', trace: true);
-    if (showError && context != null) {
-      showSnackBar(context, "Unable to $action. Please try again later.");
-    }
-  }
-
-  return null;
 }
 
 bool isInvalidPasswordResponse(http.Response response, Map body) {

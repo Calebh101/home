@@ -53,11 +53,21 @@ String? currentCalendarList;
 List? calendarLists;
 bool refreshingCalendar = false;
 
-List tabs = [
-  "Home",
-  "Devices",
-  "Calendar",
-];
+Map tabs = {
+  "Home": {
+    "icon": Icons.home,
+  },
+  "Devices": {
+    "icon": Icons.tv,
+  },
+  "Calendar": {
+    "icon": Icons.calendar_month,
+  },
+  if (useAutomation)
+  "Automation": {
+    "icon": Icons.av_timer,
+  },
+};
 
 Future<void> updateHomekit() async {
   refreshingHomekit = true;
@@ -346,6 +356,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    bool lightMode = getBrightness(context: context) == Brightness.light;
+    Color selectedColor = lightMode ? Colors.orange : Colors.deepOrangeAccent;
     double size = 1 * (widget.kiosk ? kioskmultiplier : 1);
     if (verbose) print("building dashboard... (brightness: $brightness) (size: $size)");
 
@@ -369,9 +381,12 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
           refresh();
         }
       },
+      indicatorColor: selectedColor,
       tabs: List.generate(tabs.length, (int i) {
-        return Tab(child: Text(tabs[i]), height: 36);
+        String name = tabs.keys.toList()[i];
+        return Tab(child: useIconsForTabs ? Icon(tabs[name]["icon"], color: currentPage == i + 1 ? selectedColor : getThemeColor(context), size: 28) : Text(name), height: 36);
       }),
+      isScrollable: false,
     );
 
     if (globalKiosk && noDashboardUiInKioskMode) {
@@ -1290,7 +1305,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                         ),
                       ],
                     ),
-                    ...generateRooms(),
+                    ...generateRooms(context),
                   ],
                 ),
               ],
@@ -1300,6 +1315,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
             ] : [
               CalendarPage(),
             ], scrollbar: false),
+            if (useAutomation)
+            DashboardSection(children: []),
           ]) : ready == false ? Center(
           child: CircularProgressIndicator(),
         ) : null,

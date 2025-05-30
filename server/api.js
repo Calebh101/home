@@ -2,11 +2,10 @@ const { print, warn, log, debug, notfound, dotenv, getData, saveData, getConfig,
 const express = require('express');
 const router = express.Router();
 const fs = require('fs');
-const { getState, getSocketPort } = require('./socket');
+const { getState, getSocketPort, controller } = require('./socket');
 const nodemailer = require('nodemailer');
 const axios = require('axios');
 const Path = require('path');
-const { stdout } = require('process');
 const vizio = require('./vizio.js');
 
 var minbrightness = 5;
@@ -49,18 +48,25 @@ function verifyAdmin(req) {
 
 		command(res, `awk '{printf "%s ", $2} END {print ""}' /etc/issue`, 'system.about.version.system', (stdout) => {
 			var systemver = stdout.trim();
-			command(res, buildAppCommand('info_dump'), 'app.infodump', (stdout) => {
-				var infodump = JSON.parse(stdout.trim());
-				var data = {
-					"version": {
-						"server": serverver,
-						"config": configver,
-						"system": systemver,
-						"app": ("error" in infodump) ? null : infodump.version.app,
-					},
-				};
+			var countlinescommand = configdir + "/build/countlines --json";
+			print("countlines command: " + countlinescommand);
 
-				res.status(200).json(data);
+			command(res, countlinescommand, "system.about.countlines", (stdout) => {
+				var countlinesdump = JSON.parse(stdout.trim());
+				command(res, buildAppCommand('info_dump'), 'app.infodump', (stdout) => {
+					var infodump = JSON.parse(stdout.trim());
+					var data = {
+						"version": {
+							"server": serverver,
+							"config": configver,
+							"system": systemver,
+							"app": ("error" in infodump) ? null : infodump.version.app,
+						},
+						"code": countlinesdump,
+					};
+
+					res.status(200).json(data);
+				});
 			});
 		});
 	});
@@ -912,6 +918,15 @@ function verifyAdmin(req) {
 		res.status(200).json({
 			"bed-c-light1": 1,
 		});
+	});
+
+	router.post("/devices/house/dashboard/:id/command", async (req, res) => {
+		const id = req.params.id;
+		const command = req.body.command;
+		if (id == null || command == null) return res.status(400).json({"error": "missing parameters"});
+		print("running command on dashboard " + id + ": " + command);
+		controller.send({"id": id, "command": command});
+		return res.status(200).json({"success": "command sent"});
 	});
 })();
 

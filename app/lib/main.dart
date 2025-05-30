@@ -39,6 +39,8 @@ bool dynamicCalendar = false; // deprecated because it looks ugly and also doesn
 bool noDashboardUiInKioskMode = true;
 bool showRefreshOnWeatherWidget = false;
 bool hostHasScreen = true;
+bool useIconsForTabs = true;
+bool useAutomation = false;
 
 Mode mode = Mode.auto;
 Host? defaultHost = Host.forceDebug;

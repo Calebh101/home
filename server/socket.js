@@ -6,6 +6,17 @@ const { Server } = require("socket.io");
 const { print, buildAppCommand, command, getConfig, getData, stringToBool, debug, configdir, saveData } = require("./localpkg.cjs");
 const { warn } = require("console");
 const path = require("path");
+const EventEmitter = require('events');
+
+class StreamController extends EventEmitter {
+  send(data) {
+    this.emit('data', data);
+  }
+
+  close() {
+    this.emit('end');
+  }
+}
 
 var port = 3000;
 var secure = true;
@@ -13,6 +24,7 @@ var stateIo;
 var dashboardIo;
 var dashboardIds = [];
 var server;
+var controller = new StreamController();
 
 async function stateCommand(cmd, service = "state.status") {
     var out;
@@ -154,6 +166,11 @@ async function init() {
             dashboardIds.push(id);
         }
 
+        controller.on('data', (data) => {
+            print("controller data: " + JSON.stringify(data));
+            if (data.id == id) socket.emit("update", {"action": data.command});
+        });
+
         socket.on("update", (c) => {
             // a: raw UTF-8 from data.json
             // b: parsed data from data.json
@@ -203,4 +220,5 @@ module.exports = {
     init,
     getState,
     getSocketPort,
+    controller,
 };

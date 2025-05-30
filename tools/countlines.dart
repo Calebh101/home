@@ -12,7 +12,6 @@ List<HomeFile> files = [
   file("server/server.js", language: Language.JavaScript),
   file("server/socket.js", language: Language.JavaScript),
   file("server/vizio.js", language: Language.JavaScript),
-  file("server/vizio.js", language: Language.JavaScript),
   file("server/localpkg.cjs", language: Language.JavaScript),
   file("server/api.js", language: Language.JavaScript),
   file("server/services/announcer.js", language: Language.JavaScript),
@@ -23,8 +22,8 @@ List<HomeFile> files = [
 ];
 
 List<HomeFile> directory(String path, {required Language language, List? extensions, List exempted = const [], bool recursive = true}) {
-  final dir = Directory(path);
-  return dir.listSync(recursive: recursive).whereType<File>().where((File file) => (extensions == null || extensions.contains(file.path.split(".").last) && !exempted.contains(file.path.split("/").last))).map((File f) => file(f.path, language: language)).toList();
+  final dir = Directory("/var/www/home/$path");
+  return dir.listSync(recursive: recursive).whereType<File>().where((File file) => (extensions == null || extensions.contains(file.path.split(".").last) && !exempted.contains(file.path.split("/").last))).map((File f) => HomeFile(f.path, language: language)).toList();
 }
 
 HomeFile file(String path, {required Language language}) {

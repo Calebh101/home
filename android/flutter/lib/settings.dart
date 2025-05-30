@@ -1,3 +1,4 @@
+import 'package:device_policy_controller/device_policy_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:homeapp_android_host/main.dart';
 import 'package:localpkg/dialogue.dart';
@@ -6,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:localpkg/logger.dart';
 
 Future<void> setSetting({required String name, required dynamic value}) async {
+  // Set a setting. The type is dependent on the value's runtime type.
   print("setting $name to $value (${value.runtimeType})");
   SharedPreferences prefs = await getPrefs();
 
@@ -19,11 +21,13 @@ Future<void> setSetting({required String name, required dynamic value}) async {
   }
 }
 
+// Clear a setting.
 Future<void> removeSetting({required String name}) async {
   SharedPreferences prefs = await getPrefs();
   prefs.remove(name);
 }
 
+// This is here for the FutureBuilder.
 Future<SharedPreferences> getPrefs() async {
   return await SharedPreferences.getInstance();
 }
@@ -52,11 +56,14 @@ class _SettingsState extends State<Settings> {
       body: FutureBuilder(
         future: getPrefs(),
         builder: (BuildContext context, AsyncSnapshot snapshot) {
-          if (!snapshot.hasData) {
+          if (!snapshot.hasData) { // No data to use, no data to show.
             return Center(
               child: CircularProgressIndicator(),
             );
           }
+
+          // Each setting has a title, a description, most of them have a text (the value shown at the end of the box), and most of them have an action (what to do when clicked).
+          // The action normally opens editSetting, which specifies a "type", key, and value. The type is an identifier for what type of input to show, like "bool", "slider-1-2000", etcetera.
 
           SharedPreferences prefs = snapshot.data;
           return Center(
@@ -64,7 +71,7 @@ class _SettingsState extends State<Settings> {
               child: Column(
                 children: [
                   SettingTitle(title: "About"),
-                  Setting(title: "About", desc: "A small kiosk-like app with a lot of nifty features for my home system.. Can be used on older Androids. Does not require device owner, profile owner, or device admin."),
+                  Setting(title: "About", desc: "A small kiosk-like app with a lot of nifty features for my home system.. Made to be used on older Androids."),
                   Setting(title: "Version", desc: "Version of the app.", text: version),
                   Setting(title: "Device ID", desc: "Device ID of the kiosk device. This is used to report to the home server.", text: prefs.getString("id")),
                   SettingTitle(title: "Appearance"),
@@ -80,6 +87,17 @@ class _SettingsState extends State<Settings> {
                   SettingTitle(title: "Admin"),
                   Setting(title: "Settings Passcode", desc: "Select the PIN to access the settings and navbar.", text: prefs.getString("settingsPasscode") ?? "0000", action: () => editSetting(context: context, key: "settingsPasscode", value: prefs.getString("settingsPasscode") ?? "0000", type: "pin")),
                   Setting(title: "Dashboard Passcode", desc: "Use a passcode to access the dashboard after sleep.", text: prefs.getString("dashboardPasscode") ?? "None", action: () => editSetting(context: context, key: "dashboardPasscode", value: prefs.getString("dashboardPasscode"), type: "pin-null")),
+                  Setting(title: "Unlock Kiosk Mode", desc: "Toggle kiosk mode/pinned app mode for the app. To turn back on, close and reopen the app.", action: () async {
+                    try {
+                      print("setting kiosk mode...");
+                      DevicePolicyController dpc = DevicePolicyController.instance;
+                      await dpc.unlockApp();
+                      print("device policy controller: disable kiosk mode: success");
+                    } catch (e) {
+                      warn("device policy controller: kiosk mode: $e");
+                      showSnackBar(context, "Unable to toggle kiosk mode.");
+                    }
+                  }),
                   SettingTitle(title: "Data"),
                   Setting(title: "Erase All Data & Settings", desc: "Erase all data and settings of the kiosk app. This cannot be undone.", action: () async {
                     if (!((await showConfirmDialogue(context: context, title: "Are you sure?", description: "Are you sure you want to erase all data and settings? This cannot be undone.")) ?? false)) return;
@@ -100,6 +118,7 @@ class _SettingsState extends State<Settings> {
     );
   }
 
+  // Show the settings changing dialogue, then refresh.
   Future<void> editSetting({required BuildContext context, required String key, required dynamic value, required String type}) async {
     await showDialog(
       context: context,
@@ -132,6 +151,15 @@ class _EditSettingAlertDialogueState extends State<EditSettingAlertDialogue> {
     originalValue = value;
     super.initState();
   }
+
+  // Types
+    // pin: A pin like the settings pin.
+    // pin-null: A pin that can be null, like the dashboard pin can be null to disable it completely.
+    // theme: Light/dark mode selection.
+    // bool: Yes/no selection.
+    // percent: 0% to 100% slider.
+    // percent-notempty: 1% to 100% slider.
+    // slider-min-max-unit: Slider from the specified min through the max, using the unit.
 
   @override
   Widget build(BuildContext context) {
@@ -253,6 +281,7 @@ class _EditSettingAlertDialogueState extends State<EditSettingAlertDialogue> {
           onPressed: () {
             print("ok");
             if (value == null) {
+              // If value is null, just clear the setting.
               removeSetting(name: widget.name);
             } else {
               setSetting(name: widget.name, value: value);
@@ -265,6 +294,7 @@ class _EditSettingAlertDialogueState extends State<EditSettingAlertDialogue> {
   }
 }
 
+// Used to register the device with a unique ID.
 class RegisterPrompts extends StatefulWidget {
   const RegisterPrompts({super.key});
 
@@ -282,7 +312,7 @@ class _RegisterPromptsState extends State<RegisterPrompts> {
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text("Please register your kiosk device with a unique app ID."),
+        Text("Please register your kiosk device with a unique device ID."),
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: TextField(
@@ -298,7 +328,9 @@ class _RegisterPromptsState extends State<RegisterPrompts> {
           ),
         ),
         TextButton(onPressed: () async {
+          // Make sure, ID is valid, then save it to preferences.
           String id = controller.text;
+
           if (id == "") {
             label = "Invalid";
             setState(() {});
