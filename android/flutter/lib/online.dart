@@ -14,6 +14,7 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 
 bool secureWebsocket = true;
 Map? location;
+bool deviceAwake = true;
 
 enum Host {
   debug,
@@ -59,6 +60,7 @@ Future<void> init(String? id, {required HomeState widget}) async {
         case "sleep": widget.sleep(); break;
         case "wake": widget.wakeup(); break;
         case "lock": lock(); break;
+        case "unlock": unlock(widget: widget); break;
       }
     }
   });
@@ -102,6 +104,14 @@ Future<void> lock() async {
   }
 }
 
+Future<bool> unlock({required HomeState widget}) async {
+  MethodChannel platform = MethodChannel('com.calebh101.homeapphost.channel');
+  bool result = await platform.invokeMethod('unlockDevice');
+  widget.wakeup();
+  print("unlock result: $result (time: $time)");
+  return result;
+}
+
 // Get the state of the device.
 Future<Map> getState() async {
   try {
@@ -123,6 +133,7 @@ Future<Map> getState() async {
         "adminLocked": locked,
         "dashboardLocked": lockDashboard ? entireDashboardLocked : null,
         "appawake": opacity == 0,
+        "deviceawake": deviceAwake,
       },
       "temps": {
         "battery": await platform.invokeMethod('getBatteryTemperature'), // degrees celsius
@@ -153,6 +164,7 @@ Future<Map> getState() async {
         "features": androidInfo.systemFeatures,
       },
       "version": {
+        "type": "android",
         "base": androidVersion.baseOS,
         "codename": androidVersion.codename,
         "incremental": androidVersion.incremental,

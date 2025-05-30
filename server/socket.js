@@ -47,6 +47,13 @@ async function getState() {
     var themestate;
 
     try {
+        getData();
+    } catch (e) {
+        warn("getData error: " + e);
+        saveData({});
+    }
+
+    try {
         await command(null, 'DISPLAY=:0 xset q | grep -q "Monitor is On" && echo 1 || echo 0', "screen.status", (stdout) => {
             screenstate = parseInt(stdout.trim(), 10);
         }, true, true);
@@ -176,7 +183,6 @@ async function init() {
             // b: parsed data from data.json
             // c: received data from socket
 
-            print("received data from " + id + ": " + c);
             fs.readFile('data.json', 'utf8', (e, a) => {
                 if (e) {
                     warn("data.json read error: " + e);

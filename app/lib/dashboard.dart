@@ -357,7 +357,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     bool lightMode = getBrightness(context: context) == Brightness.light;
-    Color selectedColor = lightMode ? Colors.orange : Colors.deepOrangeAccent;
+    Color? selectedColor = getSeed(context);
     double size = 1 * (widget.kiosk ? kioskmultiplier : 1);
     if (verbose) print("building dashboard... (brightness: $brightness) (size: $size)");
 
@@ -448,30 +448,33 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               AnimatedOpacity(
                 opacity: currentPage != 3 ? 0 : 1,
                 duration: Duration(milliseconds: 170),
-                child: calendarLists == null ? CircularProgressIndicator() : Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    DropdownButton<String?>(
-                      value: currentCalendarList,
-                      icon: Icon(Icons.arrow_drop_down),
-                      onChanged: (newValue) {
-                        currentCalendarList = newValue;
-                        setState(() {});
-                      },
-                      items: [
-                        DropdownMenuItem(
-                          value: null,
-                          child: Text("None"),
-                        ),
-                        ...calendarLists!.map((value) {
-                          return DropdownMenuItem(
-                            value: value,
-                            child: Text(value ?? "None"),
-                          );
-                        }),
-                      ],
-                    ),
-                  ],
+                child: calendarLists == null ? CircularProgressIndicator() : IgnorePointer(
+                  ignoring: currentPage != 3,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      DropdownButton<String?>(
+                        value: currentCalendarList,
+                        icon: Icon(Icons.arrow_drop_down),
+                        onChanged: (newValue) {
+                          currentCalendarList = newValue;
+                          setState(() {});
+                        },
+                        items: [
+                          DropdownMenuItem(
+                            value: null,
+                            child: Text("None"),
+                          ),
+                          ...calendarLists!.map((value) {
+                            return DropdownMenuItem(
+                              value: value,
+                              child: Text(value ?? "None"),
+                            );
+                          }),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

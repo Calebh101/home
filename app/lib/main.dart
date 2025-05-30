@@ -62,6 +62,10 @@ int? timeBuffer;
 bool dexcomCrash = false;
 Map updateData = {};
 
+Color? getSeed(BuildContext context) {
+  return getBrightness(context: context) == Brightness.light ? Colors.orange : Colors.deepOrange;
+}
+
 enum Mode {
   debug,
   release,
@@ -344,8 +348,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Home',
-      theme: brandTheme(seedColor: Colors.deepOrange, customFont: GoogleFonts.robotoTextTheme()),
-      darkTheme: brandTheme(seedColor: Colors.deepOrange, customFont: GoogleFonts.robotoTextTheme(), darkMode: true, backgroundColor: const Color.fromARGB(255, 15, 15, 15)),
+      theme: brandTheme(seedColor: getSeed(context) ?? Colors.red, customFont: GoogleFonts.robotoTextTheme()),
+      darkTheme: brandTheme(seedColor: getSeed(context) ?? Colors.red, customFont: GoogleFonts.robotoTextTheme(), darkMode: true, backgroundColor: const Color.fromARGB(255, 15, 15, 15)),
       themeMode: themeMode,
       home: Dashboard(kiosk: kiosk, debug: debug),
     );

@@ -47,8 +47,12 @@ void main() async {
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky); // Make the app go into fullscreen anda hide controls.
   WebViewPlatform.instance = AndroidWebViewPlatform(); // Initialize the Android WebView.
 
+  if (!Platform.isAndroid) {
+    throw Exception("Platform is not Android! Android is required for this application.");
+  }
+
   if (debug) {
-    print("implementing http overrides");
+    print("implementing http overrides...");
     HttpOverrides.global = WebsocketOverrides(); // To allow connecting to unsigned certificates.
   }
 
@@ -266,11 +270,14 @@ class HomeState extends State<Home> {
       if (time >= timeout) sleep();
     });
 
-    // Detect when the app has been focused upon. This typically happens when turning on the device while the app is pinned.
+    // Detect when the app has been focused upon or has lost focus. This typically happens when turning on the device while the app is pinned.
     channel.setMethodCallHandler((call) async {
       print("method call: ${call.method}");
       if (call.method == "onFocus") {
+        deviceAwake = true;
         onFocus();
+      } else if (call.method == "onPause") {
+        deviceAwake = false;
       }
     });
 

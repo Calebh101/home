@@ -169,9 +169,11 @@ class _DashboardDeviceState extends State<DashboardDevice> {
     if (data == null) {
       return Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.power, color: getThemeColor(context), size: 24),
-            Text("The device is not reachable."),
+            Icon(Icons.power_settings_new, color: getThemeColor(context), size: 48),
+            SizedBox(height: 8),
+            Text("This device is not reachable."),
           ],
         ),
       );
@@ -182,46 +184,52 @@ class _DashboardDeviceState extends State<DashboardDevice> {
     bool adminlocked = data!["admin"]["adminLocked"];
     bool? dashboardlocked = data!["admin"]["dashboardLocked"];
     bool awake = data!["admin"]["appawake"];
+    bool deviceawake = data!["admin"]["deviceawake"];
 
     return Column(
       children: [
-        Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: "Battery: ",
-              ),
-              TextSpan(
-                text: "$batteryvalue%",
-                style: TextStyle(
-                  color: getColorForBatteryLevel(batteryvalue),
+        Expanded(
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: "Battery: ",
                 ),
-              ),
-              TextSpan(
-                text: " and ",
-              ),
-              TextSpan(
-                text: charging ? "Charging" : "Not Charging",
-                style: TextStyle(
-                  color: charging ? Colors.white : Colors.green,
+                TextSpan(
+                  text: "$batteryvalue%",
+                  style: TextStyle(
+                    color: getColorForBatteryLevel(batteryvalue),
+                  ),
                 ),
-              ),
-            ],
+                TextSpan(
+                  text: " and ",
+                ),
+                TextSpan(
+                  text: charging ? "Charging" : "Not Charging",
+                  style: TextStyle(
+                    color: charging ? Colors.green : null,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        Text("${awake ? "Awake" : "Asleep"} and ${dashboardlocked == true ? "Locked" : "Unlocked"}"),
-        Text("Admin ${adminlocked ? "Locked" : "Unlocked"}"),
-        Spacer(),
+        deviceawake ? Column(
+          children: [
+            Text("${awake ? "Awake" : "Asleep"} and ${dashboardlocked == true ? "Locked" : "Unlocked"}"),
+            Text("Admin ${adminlocked ? "Locked" : "Unlocked"}"),
+          ],
+        ) : Expanded(child: Text("Device Suspended")),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextButton(onPressed: () {
+              if (!deviceawake) return showSnackBar(context, "You can't wake the device when it's suspended.");
               command(awake ? "sleep" : "wake");
             }, child: Text(awake ? "Sleep" : "Wake Up")),
             TextButton(onPressed: () async {
-              if (!((await showConfirmDialogue(context: context, title: "Are you sure?", description: "This will suspend the host until it is turned on again. It will still send updates to the server in the background. Press the power button on the device to turn it back on.")) ?? false)) return;
-              command("lock");
-            }, child: Text("Suspend")),
+              command(deviceawake ? "lock" : "unlock");
+            }, child: Text(deviceawake ? "Suspend" : "Restore")),
             TextButton(onPressed: () {
               showDialogue(context: context, title: "Dashboard Info", content: DashboardDeviceInfo(data: data!, device: widget.device));
             }, child: Text("Info")),
@@ -247,25 +255,48 @@ class DashboardDeviceInfo extends StatefulWidget {
 }
 
 class _DashboardDeviceInfoState extends State<DashboardDeviceInfo> {
+  Map? data;
+  StreamSubscription? subscription;
+
+  @override
+  void initState() {
+    print("initializing DashboardDeviceInfo...");
+    super.initState();
+
+    subscription = stateController.stream.listen((input) {
+      data = input["state"]["dashboards"][widget.device.id];
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    subscription?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    data ??= widget.data;
+
     return SingleChildScrollView(
       child: Column(
         children: [
+          Setting(title: "Last Updated", text: DateFormat("M/dd/yyyy h:mm:ss a").format(DateTime.parse(data!["lastUpdated"]).toLocal())),
           SettingTitle(title: "General"),
           Setting(title: "Name", text: widget.device.name),
           Setting(title: "ID", text: widget.device.id),
-          Setting(title: "Type", text: "${widget.data["model"]["physical"] ? "Physical" : "Emulated"} Dashboard"),
-          Setting(title: "App Version", text: "${widget.data["info"]["version"]}${widget.data["info"]["debug"] ? " (Debug)" : ""}"),
+          Setting(title: "Type", text: "${data!["model"]["physical"] ? "Physical" : "Emulated"} Dashboard"),
+          Setting(title: "App Version", text: "${data!["info"]["version"]}${data!["info"]["debug"] ? " (Debug)" : ""}"),
           SettingTitle(title: "State"),
-          Setting(title: "Battery", text: "${widget.data["battery"]["level"]}% and ${widget.data["battery"]["charging"] ? "Charging" : "Not Charging"}"),
-          Setting(title: "Memory", text: "${widget.data["memory"]["available"]}MB out of ${widget.data["memory"]["total"]}MB"),
-          Setting(title: "Battery Temperature", text: "${widget.data["temps"]["battery"]}°C"),
+          Setting(title: "Battery", text: "${data!["battery"]["level"]}% and ${data!["battery"]["charging"] ? "Charging" : "Not Charging"}"),
+          Setting(title: "Memory", text: "${data!["memory"]["available"]}MB out of ${data!["memory"]["total"]}MB"),
+          Setting(title: "Battery Temperature", text: "${data!["temps"]["battery"]}°C"),
           SettingTitle(title: "Device"),
-          Setting(title: "Device Name", text: "${widget.data["device"]["name"]}"),
-          Setting(title: "Model", text: "${widget.data["model"]["brand"]} ${widget.data["model"]["model"]}"),
-          Setting(title: "Manufacturer", text: "${widget.data["model"]["manufacturer"]}"),
-          Setting(title: "Android Version", text: "${widget.data["version"]["release"]}"),
+          Setting(title: "Device Name", text: "${data!["device"]["name"]}"),
+          Setting(title: "Model", text: "${data!["model"]["brand"]} ${data!["model"]["model"]}"),
+          Setting(title: "Manufacturer", text: "${data!["model"]["manufacturer"]}"),
+          Setting(title: "Android Version", text: "${data!["version"]["release"]}"),
         ],
       ),
     );

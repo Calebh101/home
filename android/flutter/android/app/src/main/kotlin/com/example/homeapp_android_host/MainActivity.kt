@@ -10,6 +10,7 @@ import android.view.WindowManager
 import android.app.ActivityManager
 import android.content.Intent
 import android.os.BatteryManager
+import android.os.PowerManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -34,9 +35,19 @@ class MainActivity : FlutterActivity() {
                     val temp = getBatteryTemperature()
                     result.success(temp)
                 }
-                "getMemoryInfo" -> {
-                    val info = getMemoryInfo()
-                    result.success(info)
+                "unlockDevice" -> {
+                    val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+                    val wakeLock = powerManager.newWakeLock(
+                        PowerManager.SCREEN_DIM_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                        "Home::WakeLockTag"
+                    )
+
+                    wakeLock.acquire()
+                    wakeLock.release()
+                    result.success(true)
+                }
+                "systemShutdown" -> {
+                    result.success(false)
                 }
                 else -> result.notImplemented()
             }
@@ -66,6 +77,11 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        methodChannel.invokeMethod("onPause", null)
+    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
@@ -79,18 +95,5 @@ class MainActivity : FlutterActivity() {
         val intent = applicationContext.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val temp = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
         return temp / 10.0
-    }
-
-    private fun getMemoryInfo(): Map<String, Any> {
-        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val memoryInfo = ActivityManager.MemoryInfo()
-        activityManager.getMemoryInfo(memoryInfo)
-
-        return mapOf(
-            "used" to (memoryInfo.totalMem - memoryInfo.availMem) / (1024 * 1024),
-            "available" to memoryInfo.availMem / (1024 * 1024),
-            "total" to memoryInfo.totalMem / (1024 * 1024),
-            "low" to memoryInfo.lowMemory
-        )
     }
 }
