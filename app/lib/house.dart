@@ -183,8 +183,8 @@ class _DashboardDeviceState extends State<DashboardDevice> {
     bool charging = data!["battery"]["charging"];
     bool adminlocked = data!["admin"]["adminLocked"];
     bool? dashboardlocked = data!["admin"]["dashboardLocked"];
-    bool awake = data!["admin"]["appawake"];
-    bool deviceawake = data!["admin"]["deviceawake"];
+    bool awake = data!["state"]["appawake"];
+    bool deviceawake = data!["state"]["deviceawake"];
 
     return Column(
       children: [

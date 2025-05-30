@@ -52,6 +52,7 @@ dependencies:
   network_info_plus: ^6.1.4
   geolocator: ^14.0.0
   device_info_plus: ^11.4.0
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

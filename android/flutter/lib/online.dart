@@ -132,8 +132,11 @@ Future<Map> getState() async {
       "admin": {
         "adminLocked": locked,
         "dashboardLocked": lockDashboard ? entireDashboardLocked : null,
+      },
+      "state": {
         "appawake": opacity == 0,
         "deviceawake": deviceAwake,
+        "sleeptimer": time,
       },
       "temps": {
         "battery": await platform.invokeMethod('getBatteryTemperature'), // degrees celsius

@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:homeapp_android_host/online.dart';
 import 'package:homeapp_android_host/settings.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:localpkg/dialogue.dart';
 import 'package:number_pad_keyboard/number_pad_keyboard.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,6 +25,7 @@ String host = debug ? "http://192.168.0.21" : "https://home.calebh101.com";
 // Most of these variables are set later by SharedPreferences. Right now they have the default value.
 // Some others are also just variables like stream controllers.
 bool dark = true;
+bool standalone = false;
 bool showLoadingProgress = false;
 bool lockDashboard = true;
 String settingsPasscode = '0000';
@@ -39,13 +42,28 @@ CameraController? cameraController;
 StreamController cameraStream = StreamController.broadcast();
 String? globalerror;
 int stateUpdateInterval = 2000; // ms
+bool? connected;
+bool clockShowSeconds = true;
+bool alignToMillisecond = true; // increases accuracy of the timer
+IdleScreenContentMode idleScreenContentMode = IdleScreenContentMode.none;
+Map? weather;
+
+enum IdleScreenContentMode {
+  none,
+  clock,
+  clockAndWeather,
+}
 
 // Main function. Asynchronous for shared preferences stuff.
 void main() async {
   print("initializing app...");
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky); // Make the app go into fullscreen anda hide controls.
-  WebViewPlatform.instance = AndroidWebViewPlatform(); // Initialize the Android WebView.
+  await setupPrefs();
+
+  if (standalone == false) {
+    WebViewPlatform.instance = AndroidWebViewPlatform(); // Initialize the Android WebView.
+  }
 
   if (!Platform.isAndroid) {
     throw Exception("Platform is not Android! Android is required for this application.");
@@ -66,9 +84,26 @@ void main() async {
     warn("device policy controller: $e");
   }
 
-  await setupPrefs();
-  print("running app...");
+  Timer.periodic(Duration(minutes: 10), (Timer timer) async {
+    connected = await checkConnectivity();
+  });
+
+  connected = await checkConnectivity();
+  print("running app... (standalone: $standalone)");
   runApp(const MyApp());
+}
+
+Future<bool> checkConnectivity() async {
+  print("checkConnectivity: checking connectivity...");
+
+  try {
+    http.Response result = await http.get(Uri.parse('https://www.google.com')).timeout(Duration(seconds: 5));
+    print("checkConnectivity: ${result.statusCode} (${result.statusCode == 200})");
+    return result.statusCode == 200;
+  } catch (e) {
+    print("checkConnectivity: $e");
+    return false;
+  }
 }
 
 // Setup shared preferences settings. It tries to find the value in shared preferences, but it falls back to itself if not found.
@@ -77,6 +112,7 @@ Future<void> setupPrefs() async {
   await cameraController?.stopImageStream(); // Make sure the image stream isn't running.
   SharedPreferences prefs = await SharedPreferences.getInstance();
 
+  standalone = prefs.getBool("standalone") ?? standalone;
   dark = prefs.getBool("darkMode") ?? dark;
   showLoadingProgress = prefs.getBool("showLoadingProgress") ?? showLoadingProgress;
   settingsPasscode = prefs.getString("settingsPasscode") ?? settingsPasscode;
@@ -86,12 +122,14 @@ Future<void> setupPrefs() async {
   cameraProcessInterval = prefs.getInt("cameraProcessInterval") ?? cameraProcessInterval;
   imageDifferenceThreshold = prefs.getDouble("imageDifferenceThreshold") ?? imageDifferenceThreshold;
   stateUpdateInterval = prefs.getInt("stateUpdateInterval") ?? stateUpdateInterval;
+  clockShowSeconds = prefs.getBool("clockShowSeconds") ?? clockShowSeconds;
+  idleScreenContentMode = IdleScreenContentMode.values[prefs.getInt("idleScreenContentMode") ?? 0];
 
   // Some extra stuff that uses some preferences to be set.
   lockDashboard = dashboardPasscode?.isNotEmpty ?? false;
   entireDashboardLocked = lockDashboard;
 
-  if (useCamera == true) {
+  if (useCamera == true && standalone == true) {
     await initCameras(); // Reinitialize cameras.
   }
 }
@@ -231,6 +269,7 @@ class HomeState extends State<Home> {
   @override
   void initState() {
     (() async { 
+      if (standalone) return; // Skip registering, standalone mode.
       // If it hasn't been registered, force the user to register it.
       SharedPreferences prefs = await SharedPreferences.getInstance();
       init(prefs.getString("id"), widget: this);
@@ -238,37 +277,48 @@ class HomeState extends State<Home> {
       if (id == null && mounted) await resetDeviceID(context: context);
     })();
 
-    controller.setNavigationDelegate(
-      NavigationDelegate(
-        onProgress: (int progress) {
-          loading = progress;
-          setState(() {});
-        },
-        onPageStarted: (String url) {
-          print("page start: $url");
-        },
-        onPageFinished: (String url) {
-          print("page finish: $url");
-        },
-        onHttpError: (HttpResponseError e) {},
-        onWebResourceError: (WebResourceError e) {
-          globalerror = "Web resource error: ${e.description}";
-          print("error: $globalerror");
-          setState(() {});
-        },
-        onNavigationRequest: (NavigationRequest request) {
-          print("navigating to: $request");
-          return NavigationDecision.navigate;
-        },
-      ),
-    );
+    if (!standalone) {
+      controller.setNavigationDelegate(
+        NavigationDelegate(
+          onProgress: (int progress) {
+            loading = progress;
+            setState(() {});
+          },
+          onPageStarted: (String url) {
+            print("page start: $url");
+          },
+          onPageFinished: (String url) {
+            print("page finish: $url");
+          },
+          onHttpError: (HttpResponseError e) {
+            print("http error: ${e.response?.statusCode}");
+          },
+          onWebResourceError: (WebResourceError e) {
+            globalerror = "Web resource error: ${e.description}";
+            print("error: $globalerror");
+            setState(() {});
+          },
+          onNavigationRequest: (NavigationRequest request) {
+            print("navigating to: $request");
+            return NavigationDecision.navigate;
+          },
+        ),
+      );
+    }
+
+    // Align to the millisecond. Adds an extra 3 seconds for accuracy.
+    Timer(Duration(milliseconds: alignToMillisecond ? ((1000 - DateTime.now().millisecond) + 3000) : 0), () {
+      timer = Timer.periodic(Duration(seconds: 1), (Timer timer) {
+        int ms = DateTime.now().millisecond;
+        time++;
+        setState(() {});
+        if (verbose) print("verbose: timer service (time: $time) (millisecond: $ms)");
+        if (time >= timeout) sleep();
+      });
+    });
 
     // Sleep timer.
-    timer = Timer.periodic(Duration(seconds: 1), (Timer timer) {
-      time++;
-      setState(() {});
-      if (time >= timeout) sleep();
-    });
+    // Align to the ;00 of a second.
 
     // Detect when the app has been focused upon or has lost focus. This typically happens when turning on the device while the app is pinned.
     channel.setMethodCallHandler((call) async {
@@ -349,9 +399,7 @@ class HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
-    if (verbose) {
-      print("verbose: building widget... (opacity: $opacity) (time: $time)");
-    }
+    Size screen = MediaQuery.of(context).size;
 
     // We override the default back button behavior, and instead we show a pin input to unlock admin settings.
     return PopScope(
@@ -422,12 +470,14 @@ class HomeState extends State<Home> {
                 height: double.infinity,
                 child:
                     // If the dashboard is locked, then show a big lock icon to hide stuff behind it.
-                    entireDashboardLocked
+                    (connected == null ? Center(child: CircularProgressIndicator()) : entireDashboardLocked
                         ? Center(child: Icon(Icons.lock, size: 196))
                         // If there's an error, show that instead.
                         : (globalerror == null
                             // If loading, then show a progress indicator.
-                            ? (loading >= 100
+                            ? (standalone ? Center(
+                              child: Text("$connected"),
+                            ) : (loading >= 100
                                 ? WebViewWidget(controller: controller)
                                 : Center(
                                   child: CircularProgressIndicator(
@@ -436,7 +486,7 @@ class HomeState extends State<Home> {
                                             ? null
                                             : (loading / 100),
                                   ),
-                                ))
+                                )))
                             : Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -451,20 +501,46 @@ class HomeState extends State<Home> {
                                   ),
                                 ],
                               ),
-                            )),
+                            ))),
               ),
             ),
             // A big black box that emulates sleeping. It can't get hit tested.
-            IgnorePointer(
-              child: AnimatedOpacity(
-                duration: Duration(milliseconds: opacity == 1 ? 2000 : 500),
-                opacity: opacity,
-                child: Container(
-                  width: double.infinity,
-                  height: double.infinity,
-                  color: Colors.black,
-                ),
-              ),
+            Builder(
+              builder: (context) {
+                int mode = IdleScreenContentMode.values.indexOf(idleScreenContentMode);
+                if (mode >= 2 && connected == false) mode = 1;
+
+                return IgnorePointer(
+                  child: AnimatedOpacity(
+                    duration: Duration(milliseconds: opacity == 1 ? 2000 : 500),
+                    opacity: opacity,
+                    child: Scaffold(
+                      body: Stack(
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            height: double.infinity,
+                            color: Colors.black,
+                          ),
+                          idleScreenContentMode == IdleScreenContentMode.none ? SizedBox.shrink() : Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(DateFormat("h:mm${clockShowSeconds ? ":ss" : ""} a").format(DateTime.now()), style: TextStyle(fontSize: screen.width / (mode >= 2 ? 15 : 10), color: Colors.white)),
+                                Text(DateFormat("MMMM d, yyyy").format(DateTime.now()), style: TextStyle(fontSize: screen.width / (mode >= 2 ? 30 : 20), color: Colors.white)),
+                                if (weather != null)
+                                Column(
+                                  children: [],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
             ),
           ],
         ),

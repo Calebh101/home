@@ -76,7 +76,9 @@ class _SettingsState extends State<Settings> {
                   Setting(title: "Device ID", desc: "Device ID of the kiosk device. This is used to report to the home server.", text: prefs.getString("id")),
                   SettingTitle(title: "Appearance"),
                   Setting(title: "Theme", desc: "Set the kiosk to light or dark mode. If set to dark mode, the kiosk app will request the home app with a parameter to force dark mode.", text: (prefs.getBool("darkMode") ?? true) ? "Dark" : "Light", action: () => editSetting(context: context, key: "darkMode", value: prefs.getBool("darkMode") ?? true, type: "theme")),
+                  Setting(title: "Idle Screen Content", desc: "What to show when the screen is idle.", text: "Mode #${(prefs.getInt("idleScreenContentMode") ?? 0)}", action: () => editSetting(context: context, key: "idleScreenContentMode", value: prefs.getInt("idleScreenContentMode") ?? 0, type: "idleScreenContentMode")),
                   Setting(title: "Show Loading Progress", desc: "Show the progress of loading the WebView in a progress indicator.", text: (prefs.getBool("showLoadingProgress") ?? false) ? "Yes" : "No", action: () => editSetting(context: context, key: "showLoadingProgress", value: prefs.getBool("showLoadingProgress") ?? false, type: "bool")),
+                  Setting(title: "Show Seconds in Clock", desc: "Show the current second in the digital clock.", text: (prefs.getBool("clockShowSeconds") ?? true) ? "Yes" : "No", action: () => editSetting(context: context, key: "clockShowSeconds", value: prefs.getBool("clockShowSeconds") ?? false, type: "bool")),
                   Setting(title: "Screen Timeout", desc: "How long to wait before sleeping the dashboard.", text: "${prefs.getInt("screenTimeout") ?? 20}s", action: () => editSetting(context: context, key: "screenTimeout", value: prefs.getInt("screenTimeout") ?? 20, type: "slider-5-600-sec")),
                   SettingTitle(title: "Camera"),
                   Setting(title: "Use Camera", desc: "Use the camera to detect motion to automatically wake the device. Not recommended on less powerful devices.", text: (prefs.getBool("useCamera") ?? false) ? "Yes" : "No", action: () => editSetting(context: context, key: "useCamera", value: prefs.getBool("useCamera") ?? false, type: "bool")),
@@ -97,6 +99,12 @@ class _SettingsState extends State<Settings> {
                       warn("device policy controller: kiosk mode: $e");
                       showSnackBar(context, "Unable to toggle kiosk mode.");
                     }
+                  }),
+                  Setting(title: "${standalone ? "Exit" : "Restart in"} Standalone Mode", desc: "Standalone mode is designed for trips where the host machine is shut down for whatever reason. It does not need WiFi for the base version.", text: "Currently ${standalone ? "On" : "Off"}", action: () async {
+                    if (!((await showConfirmDialogue(context: context, title: "Are you sure?", description: "The app will need to be restarted.")) ?? false)) return;
+                    SharedPreferences prefs = await SharedPreferences.getInstance();
+                    prefs.setBool("standalone", !standalone);
+                    showConstantDialogue(context: context, message: "Please close and reopen the app for your changes to take effect.");
                   }),
                   SettingTitle(title: "Data"),
                   Setting(title: "Erase All Data & Settings", desc: "Erase all data and settings of the kiosk app. This cannot be undone.", action: () async {
@@ -268,7 +276,24 @@ class _EditSettingAlertDialogueState extends State<EditSettingAlertDialogue> {
             ),
           );
         },
-      ) : Text("Error: invalid type: ${widget.type}"))))),
+      ) : (widget.type == "idleScreenContentMode" ? SizedBox(
+        height: 300,
+        width: 300,
+        child: ListView(
+          shrinkWrap: true,
+          children: List.generate(IdleScreenContentMode.values.length, (int i) {
+            return ListTile(
+              title: Text(IdleScreenContentMode.values[i].toString().replaceFirst("IdleScreenContentMode.", "")),
+              subtitle: Text("Mode $i"),
+              leading: value == i ? Icon(Icons.check) : SizedBox.shrink(),
+              onTap: () {
+                value = i;
+                setState(() {});
+              },
+            );
+          }),
+        ),
+      ) : Text("Error: invalid type: ${widget.type}")))))),
       actions: <Widget>[
         TextButton(
           child: Text('Cancel'),
