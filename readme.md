@@ -29,16 +29,17 @@ This is all the software behind my home system. It contains *multiple* different
 - `temp`: Temporary files.
 - `tools`: Some extra tools I use to help streamline development.
     - `python3.9`: A Python 3.9 virtual environment, because it was the only solution I knew of.
-    - `buildall.sh`: Generates web and Linux builds of the main app, and copies them to `build` and `public`.
+    - `buildall.sh`: Generates web and Linux builds of the main app, and copies them to `build` and `public`. This also builds some extra programs.
     - `codetest.dart`: Scans the main app and makes sure some things are correct for release.
-    - `countlines.dart`: A fun little script to count the lines and files of codr I've made. Run with `--json` to output as JSON.
-    - `deployweb.sh`: Web part of `buildall`.
-    - `deployapp.sh`: App part of `buildall`.
+    - `countlines.dart`: A fun little script to count the lines and files of code I've made. Run with `--json` to output as JSON.
+    - `deployweb.sh`: Copies the web build to `public`.
+    - `deployapp.sh`: Copies the Linux app build to `build`.
     - `dnscheck.sh`: Deprecated, for a DNS server.
     - `fancontrol.sh`: Used for controlling the fan speed on my old iMac.
     - `followdns.sh`: Deprecated, for a DNS server.
     - `grantnode.sh`: Grants Node.js permissions for stuff like using port 80.
     - `speedtest`: speedtest.net CLI tool.
+    - `updatehost.sh`: Used by the server to restart the home app and server after pulling git changes.
     - `webcam.sh`: Ran by the server to capture webcam data.
 - `url`: An old, deprecated directory related to proxying.
 - `.env`: Contains environmental variables.

@@ -21,7 +21,8 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Building..."
-dart compile exe "$root/tools/countlines.dart" -o "$root/build/countlines"
+dart compile exe "$root/tools/countlines.dart" -o "$root/temp/countlines"
+
 if ! $NO_APP_BUILD_PRESENT; then
     flutter build web
     flutter build linux
@@ -33,5 +34,6 @@ if ! $NO_APP_BUILD_PRESENT; then
     ../tools/deployapp.sh
 fi
 
+cp "$root/temp/countlines" "$root/build/countlines"
 echo "Build and deploy complete"
 exit 0

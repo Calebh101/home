@@ -202,7 +202,7 @@ class _SettingsState extends State<Settings> {
                 SettingTitle(title: "Admin"),
                 Setting(title: "Update ${widget.kiosk ? "App" : "Host"}", desc: "Have the host OTA update.", action: () async {
                   if (!(await admin(context: context))) return;
-                  showSnackBar(context, "This feature has not been implemented yet.");
+                  request(endpoint: "system/update", context: context, action: "update the host", body: {"password": adminPassword});
                 }),
                 if (widget.kiosk)
                 Setting(title: "Close App", desc: "Close the current app for debug or maintenance purposes.", action: () async {
