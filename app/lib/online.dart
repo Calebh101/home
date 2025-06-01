@@ -12,8 +12,9 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:localpkg/dialogue.dart';
 import 'package:localpkg/logger.dart';
 
-bool debugHost = globalDebug;
+bool useLocalHost = false;
 bool secureWebsocket = true;
+bool debugHost = globalDebug;
 
 enum Host {
   debug,
@@ -23,7 +24,7 @@ enum Host {
 }
 
 String getBaseUrl({Host? host, bool websocket = false}) {
-  return globalKiosk ? "${websocket && secureWebsocket ? "wss" : "http"}://localhost" : ((defaultHost == Host.forceDebug ? Host.debug : (host ?? ((defaultHost) ?? (debugHost ? Host.debug : Host.release)))) == Host.debug) ? "${websocket && secureWebsocket ? "wss" : "http"}://192.168.0.21" : "${websocket && secureWebsocket ? "wss" : (websocket ? "http" : "https")}://home.calebh101.com";
+  return globalKiosk ? "${websocket && secureWebsocket ? "wss" : "http"}://localhost" : ((defaultHost == Host.forceDebug ? Host.debug : (host ?? ((defaultHost) ?? (debugHost ? Host.debug : Host.release)))) == Host.debug) ? "${websocket && secureWebsocket ? "wss" : "http"}://192.168.0.21" : "${websocket && secureWebsocket ? "wss" : (websocket || useLocalHost ? "http" : "https")}://${useLocalHost ? "192.168.0.23" : "home.calebh101.com"}";
 }
 
 bool isInvalidPasswordResponse(http.Response response, Map body) {

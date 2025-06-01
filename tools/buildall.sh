@@ -4,16 +4,21 @@
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 root="/var/www/home"
 NO_APP_BUILD_PRESENT=false
+DEBUG=false
 
 for arg in "$@"; do
     if [[ "$arg" == "--no-app-build" ]]; then
         NO_APP_BUILD_PRESENT=true
         break
     fi
+    if [[ "$arg" == "--debug" ]]; then
+        DEBUG=true
+        break
+    fi
 done
 
 dart run $SCRIPT_DIR/codetest.dart
-echo "Starting build and deploy"
+echo "Starting build and deploy (debug: $DEBUG)"
 cd "$root/app"
 
 if [ $? -ne 0 ]; then
@@ -24,8 +29,13 @@ echo "Building..."
 dart compile exe "$root/tools/countlines.dart" -o "$root/temp/countlines"
 
 if ! $NO_APP_BUILD_PRESENT; then
-    flutter build web
-    flutter build linux
+    if $DEBUG; then
+        flutter build web --debug
+        flutter build linux --debug
+    else
+        flutter build web
+        flutter build linux
+    fi
 fi
 
 echo "Deploying..."
