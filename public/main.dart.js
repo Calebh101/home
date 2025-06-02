@@ -28124,7 +28124,7 @@ if(r){A.aO("wrong host: "+$.qV.j(0)+" (enforce)",!1)
 A.b3i("releasetest-wronghost","Release test #2 failed: Host was not set to appropriate host for non-debug build: "+$.qV.j(0),0,A.b3T(B.Yq))
 $.qV=B.cF}r=$.qV
 if(r===B.pK){A.aO("wrong host: "+r.j(0)+" (ignore)",!1)
-$.qV=B.l0}$.vC=b
+$.qV=B.pJ}$.vC=b
 $.B9=c
 if(c)$.bml=B.CZ
 A.aO("setting up initializers...",!1)
@@ -28410,9 +28410,9 @@ aIM:function aIM(a){this.a=a},
 aQQ(a,b){var s,r="http"
 if($.B9)s=(b?"wss":r)+"://localhost"
 else{s=$.qV
-if(s===B.l0)s=B.pJ
+if(s===B.pJ)s=B.l0
 else if(!(a==null))s=a
-if(s===B.pJ)s=(b?"wss":r)+"://192.168.0.21"
+if(s===B.l0)s=(b?"wss":r)+"://192.168.0.21"
 else{if(b)s="wss"
 else s=r
 s+="://192.168.0.23"}}return s},
@@ -112029,9 +112029,9 @@ B.cE=new A.E3(2,"translucent")
 B.pH=new A.E4(0,"left")
 B.L6=new A.E4(1,"center")
 B.pI=new A.E4(2,"right")
-B.pJ=new A.x9(0,"debug")
+B.l0=new A.x9(0,"debug")
 B.cF=new A.x9(1,"release")
-B.l0=new A.x9(2,"forceDebug")
+B.pJ=new A.x9(2,"forceDebug")
 B.pK=new A.x9(3,"forceDebugIgnore")
 B.L7=new A.nc(null)
 B.L8=new A.bo(57487,"MaterialIcons",null,!1)

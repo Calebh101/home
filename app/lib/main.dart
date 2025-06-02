@@ -43,7 +43,7 @@ bool useIconsForTabs = true;
 bool useAutomation = false;
 
 Mode mode = Mode.auto;
-Host? defaultHost = Host.forceDebug;
+Host? defaultHost = Host.debug;
 Host? serverHost;
 
 List globalArgs = [];
