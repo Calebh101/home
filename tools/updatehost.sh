@@ -33,7 +33,8 @@ pm2 restart "$dir/server/server.js" 2>&1 | log
 for arg in "$@"; do
     if [[ "$arg" == "-a" ]]; then
         echo "Running app..." 2>&1 | log
-        nohup "$dir/build/homeapp" > /dev/null 2>&1 &
+        export DISPLAY=:0
+        "$dir/build/homeapp" > /dev/null 2>&1 &
         break
     fi
 done
