@@ -3,6 +3,7 @@
 
 root="/var/www/home"
 script="$root/server/server.js"
+app="$root/tools/backgroundapp.sh"
 logfile="$root/logs/updatehost.log"
 
 count=0
@@ -14,7 +15,8 @@ log() {
     done
 }
 
-"$root/tools/backgroundapp.sh"
+echo "Starting $app..."
+"$app"
 
 while true; do
     echo "Starting $script... (index: $count)"

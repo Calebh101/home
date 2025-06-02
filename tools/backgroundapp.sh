@@ -1,2 +1,2 @@
 #!/bin/bash
-"$dir/build/homeapp --kiosk" > /dev/null 2>&1 &
+/var/www/home/build/homeapp --kiosk > /dev/null 2>&1 &
