@@ -33,7 +33,7 @@ for arg in "$@"; do
         echo "Running app..." 2>&1 | log
         export DISPLAY=:0
         export XAUTHORITY="/home/$user/.Xauthority"
-        "$dir/build/homeapp --kiosk" > /dev/null 2>&1 &
+        "$root/tools/backgroundapp.sh"
         break
     fi
 done

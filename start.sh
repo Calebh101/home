@@ -14,7 +14,7 @@ log() {
     done
 }
 
-"$dir/build/homeapp --kiosk" > /dev/null 2>&1 &
+"$root/tools/backgroundapp.sh"
 
 while true; do
     echo "Starting $script... (index: $count)"
