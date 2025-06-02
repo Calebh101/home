@@ -12,7 +12,7 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:localpkg/dialogue.dart';
 import 'package:localpkg/logger.dart';
 
-bool useLocalHost = false;
+bool useLocalHost = true;
 bool secureWebsocket = true;
 bool debugHost = globalDebug;
 
