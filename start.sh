@@ -16,21 +16,25 @@ log() {
 }
 
 echo "Starting $app..."
-"$app"
+$app
 
 while true; do
     echo "Starting $script... (index: $count)"
     node "$script" "$@"
+
+    seconds=0
     code=$?
 
     if [[ $code -ne 0 ]]; then
+        seconds=5
         ((count++))
+
         if [ "$count" -eq 10 ]; then
             echo "Server hit $count bad restarts! Stopping..."
             break;
         fi
     fi
 
-    echo "Script stopped with exit code $code. Restarting in 5 seconds..."
-    sleep 5
+    echo "Script stopped with exit code $code. Restarting in $seconds seconds..."
+    sleep $seconds
 done
