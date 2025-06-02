@@ -419,7 +419,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(DateFormat('h:mm a').format(DateTime.now()), style: TextStyle(fontSize: getSize(4))),
+                  Text(DateFormat('h:mm a').format(DateTime.now()), style: TextStyle(fontSize: getSize(4))).gradient(colors: [GradientColor(darkMode ? Colors.white : Colors.black), GradientColor(darkMode ? Colors.grey : const Color.fromARGB(255, 21, 21, 21))]),
                   Text(DateFormat('MMMM d, y').format(DateTime.now()), style: TextStyle(fontSize: getSize(2))),
                 ],
               ),

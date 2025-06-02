@@ -113,8 +113,12 @@ async function getState() {
 
 async function init() {
     print("setting up sockets on port " + port);
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     const app = express();
+
+    if (debug) {
+        print("setting NODE_TLS_REJECT_UNAUTHORIZED to 0...");
+        process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    }
 
     const options = {
         cert: fs.readFileSync(path.resolve(configdir + '/cert/cert.pem')),

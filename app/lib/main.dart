@@ -24,7 +24,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
-String version = kIsWeb ? "1.1.1A" : "1.1.1B";
+String version = "2.0.0A";
 String homedir = "/var/www/home";
 
 bool forceKiosk = false;

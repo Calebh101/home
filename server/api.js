@@ -167,7 +167,10 @@ function verifyAdmin(req) {
 
 	router.post("/system/update", async (req, res) => {
 		if (!verifyAdmin(req)) return res.status(403).json({"error": "invalid password"});
-		command(res, configdir + "/tools/updatehost.sh", "system.update");
+		res.status(200).json({"success": "starting"});
+		command(null, configdir + "/tools/updatehost.sh", "system.update", () => {
+			print("update started");
+		});
 	});
 
 	router.post('/system/refresh', async (req, res) => {
