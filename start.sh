@@ -14,6 +14,8 @@ log() {
     done
 }
 
+"$dir/build/homeapp --kiosk" > /dev/null 2>&1 &
+
 while true; do
     echo "Starting $script... (index: $count)"
     node "$script" "$@"
