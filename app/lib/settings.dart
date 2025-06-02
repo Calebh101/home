@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:homeapp/dashboard.dart';
@@ -206,13 +205,10 @@ class _SettingsState extends State<Settings> {
                   await request(endpoint: "system/update", context: context, action: "update the host", body: {"password": adminPassword});
                   showSnackBar(context, "The update was triggered.");
                 }),
-                if (widget.kiosk)
-                Setting(title: "Close App", desc: "Close the current app for debug or maintenance purposes.", action: () async {
+                Setting(title: "Close ${widget.kiosk ? "App" : "Host App"}", desc: "Close the ${widget.kiosk ? "current" : "host's"} app for debug or maintenance purposes.", action: () async {
                   if (!(await admin(context: context))) return;
                   if ((await showConfirmDialogue(context: context, title: "Are you sure?", description: "This will close the current running app and stop certain services on the host. This is only to be used for debugging or maintenance.") ?? false) == false) return;
-
-                  print("closing app...");
-                  exit(0);
+                  request(endpoint: "system/app/close", context: context, action: "close the host's app");
                 }),
               ],
             ),

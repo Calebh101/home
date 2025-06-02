@@ -1,20 +1,26 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:battery_plus/battery_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:device_policy_controller/device_policy_controller.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:homeapp_android_host/main.dart';
 import 'package:http/http.dart' as http;
+import 'package:localpkg/dialogue.dart';
 import 'package:localpkg/logger.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
+String? zip;
 bool secureWebsocket = true;
 Map? location;
 bool deviceAwake = true;
+Host host = debug ? Host.debug : Host.release;
 
 enum Host {
   debug,
@@ -243,4 +249,81 @@ class WebsocketOverrides extends HttpOverrides {
     client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
     return client;
   }
+}
+
+void initWeather() async {
+  // Every 10 minutes, get the ZIP code and update the weather.
+  print("initializing weather...");
+  updateWeather();
+
+  Timer.periodic(Duration(minutes: 10), (Timer timer) async {
+    updateWeather();
+  });
+}
+
+Future<void> updateWeather() async {
+  print("weather: updating weather...");
+  Map? newWeather = await request(endpoint: "weather", body: {"zip": zip});
+  if (newWeather == null) return;
+  print("weather: received weather: ${newWeather.runtimeType}");
+  weather = newWeather;
+}
+
+Future<void> getZip() async {
+  print("zip: getting position...");
+  Position position = await Geolocator.getCurrentPosition(locationSettings: LocationSettings(accuracy: LocationAccuracy.high));
+  String? result;
+
+  print("zip: getting placemarks...");
+  List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+
+  if (placemarks.isNotEmpty) {
+    print("zip: found placemark: ${placemarks.first}");
+    result = placemarks.first.postalCode;
+  }
+
+  if (result != null) {
+    print("zip: found zip: $result");
+    zip = result;
+  }
+}
+
+Future<Map?> request({required String endpoint, Map<String, String>? headers, Map? body, BuildContext? context, String action = "complete action", Host? host, bool showError = true, bool silentLogging = false}) async {
+  String baseurl = getBaseUrl();
+  headers ??= {'Content-Type': 'application/json'};
+  body ??= {};
+
+  Uri url = Uri.parse("$baseurl/public/$endpoint");
+  if (silentLogging == false || verbose) print("request: requesting url $url with body $body");
+
+  try {
+    http.Response response = await http.post(
+      url,
+      headers: headers,
+      body: jsonEncode(body),
+    );
+
+    Map result = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      if (silentLogging == false || verbose == true) print('response data (url: $url): $result');
+      return result;
+    } else if (isInvalidPasswordResponse(response, result)) {
+      warn("invalid password response received");
+      if (context != null && context.mounted) showSnackBar(context, "Unable to $action. Invalid password.");
+    } else {
+      if (result.containsKey('error')) {
+        error('response error: $result', code: "${response.statusCode}");
+      } else {
+        error('response error', code: "${response.statusCode}");
+      }
+      if (showError && context != null && context.mounted) {
+        showSnackBar(context, "Unable to $action. Please try again later.");
+      }
+    }
+  } catch (e) {
+    error('send error: $e', trace: true);
+    if (showError && context != null && context.mounted) showSnackBar(context, "Unable to $action. Please try again later.");
+  }
+
+  return null;
 }

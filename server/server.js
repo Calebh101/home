@@ -85,9 +85,8 @@ app.use(cparser);
 app.use(verify);
 
 print("generating routes...");
-
-app.use(logger("after verify", "1", true));
 app.use('/api', require('./api.js'));
+app.use('/public', require('./public.api.js'));
 app.use(express.static(wwwroot));
 app.use(notfound);
 
@@ -103,6 +102,11 @@ function logger(service, log, progress = true) {
 }
 
 function verify(req, res, next) {
+  if (!req.path.startsWith("/api")) {
+    print("verify client: (path: " + req.path + ") = true");
+    return next();
+  }
+
   const accessCode = req.headers["authentication"];
   const password = req.headers["password"];
   const override = args["override-verify"] == true;

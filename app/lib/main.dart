@@ -27,7 +27,7 @@ import 'package:window_manager/window_manager.dart';
 String version = "2.0.0A";
 String homedir = "/var/www/home";
 
-bool forceKiosk = false;
+bool forceKiosk = true;
 bool forceNativeSpotify = false;
 bool allowDebugAlerts = false;
 bool alwaysShowTime = false;
@@ -41,6 +41,7 @@ bool showRefreshOnWeatherWidget = false;
 bool hostHasScreen = true;
 bool useIconsForTabs = true;
 bool useAutomation = false;
+bool useLocalHost = true;
 
 Mode mode = Mode.auto;
 Host? defaultHost = Host.debug;
@@ -291,8 +292,11 @@ Future<void> socket() async {
           client.writeln(jsonEncode({"error": "deprecated"}));
           client.close();
           return;
+        } else if (message == "exit") {
+          print("exiting...");
+          exit(0);
         } else {
-          // this doesn't mean the command isn't available, it means there's no data to be sent back
+          // This doesn't mean the command isn't available, just it means there's no data to be sent back.
           writeout({"code": 200});
         }
 

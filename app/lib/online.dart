@@ -12,7 +12,6 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:localpkg/dialogue.dart';
 import 'package:localpkg/logger.dart';
 
-bool useLocalHost = true;
 bool secureWebsocket = true;
 bool debugHost = globalDebug;
 
@@ -255,6 +254,7 @@ Future<void> stateInputter() async {
   });
 
   socket.on('update', (data) {
+    if (verbose) print("socket update: ${data.runtimeType}");
     stateController.sink.add({
       "music": data["app"]["music"],
       "state": data,

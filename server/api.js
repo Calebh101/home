@@ -174,6 +174,10 @@ function verifyAdmin(req) {
 		process.exit(0);
 	});
 
+	router.post("/system/app/close", (req, res) => {
+		command(res, buildAppCommand("exit"), "system.app.close");
+	});
+
 	router.post('/system/refresh', async (req, res) => {
 		if (await reloadAllDatabases()) {
 			res.status(200).json({"success": "refreshed"});

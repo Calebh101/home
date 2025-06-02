@@ -261,6 +261,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   }
 
   Future<void> init() async {
+    print("initializing...");
     ready = false;
     refresh(mini: true);
 

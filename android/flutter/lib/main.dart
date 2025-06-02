@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:device_policy_controller/device_policy_controller.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:homeapp_android_host/online.dart';
@@ -18,9 +17,10 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:localpkg/logger.dart';
 
 String version = "1.0.0A";
-bool debug = kDebugMode;
-bool verbose = true;
-String host = debug ? "http://192.168.0.21" : "https://home.calebh101.com";
+bool debug = false;
+bool useLocalHost = true;
+bool verbose = false;
+String host = debug ? (useLocalHost ? "http://192.168.0.23" : "http://192.168.0.21") : "https://home.calebh101.com";
  
 // Most of these variables are set later by SharedPreferences. Right now they have the default value.
 // Some others are also just variables like stream controllers.
@@ -59,7 +59,9 @@ void main() async {
   print("initializing app...");
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky); // Make the app go into fullscreen anda hide controls.
+
   await setupPrefs();
+  initWeather();
 
   if (standalone == false) {
     WebViewPlatform.instance = AndroidWebViewPlatform(); // Initialize the Android WebView.
@@ -259,9 +261,39 @@ class Home extends StatefulWidget {
 }
 
 class HomeState extends State<Home> {
+  final controller = WebViewController()
+  ..setJavaScriptMode(JavaScriptMode.unrestricted)
+  ..addJavaScriptChannel(
+    'ConsoleLog',
+    onMessageReceived: (message) {
+      print('WebView: ${message.message}');
+    },
+  )
+  ..loadRequest(Uri.parse("$host/?forceDarkTheme=${dark ? 1 : 0}"))
+  ..runJavaScript('''
+    (function() {
+      var oldLog = console.log;
+      var oldWarn = console.warn;
+      var oldError = console.error;
+
+      console.log = function(message) {
+        ConsoleLog.postMessage("LOG: " + message);
+        oldLog.apply(console, arguments);
+      };
+
+      console.warn = function(message) {
+        ConsoleLog.postMessage("WARN: " + message);
+        oldWarn.apply(console, arguments);
+      };
+
+      console.error = function(message) {
+        ConsoleLog.postMessage("ERROR: " + message);
+        oldError.apply(console, arguments);
+      };
+    })();
+  ''');
+
   int loading = 0;
-  // Unrestricted JavaScript, and forceDarkTheme set based on preferences.
-  WebViewController controller = WebViewController()..setJavaScriptMode(JavaScriptMode.unrestricted)..loadRequest(Uri.parse("$host/?forceDarkTheme=${dark ? 1 : 0}"));
   MethodChannel channel = MethodChannel('com.calebh101.homeapphost.channel');
   Timer? timer;
   StreamSubscription? cameraSubscription;
@@ -297,6 +329,11 @@ class HomeState extends State<Home> {
             globalerror = "Web resource error: ${e.description}";
             print("error: $globalerror");
             setState(() {});
+
+            Future.delayed(Duration(seconds: 10), () {
+              print("reloading on error...");
+              controller.reload();
+            });
           },
           onNavigationRequest: (NavigationRequest request) {
             print("navigating to: $request");
@@ -476,7 +513,7 @@ class HomeState extends State<Home> {
                         : (globalerror == null
                             // If loading, then show a progress indicator.
                             ? (standalone ? Center(
-                              child: Text("$connected"),
+                              child: Text("$connected - $weather"),
                             ) : (loading >= 100
                                 ? WebViewWidget(controller: controller)
                                 : Center(
@@ -508,7 +545,7 @@ class HomeState extends State<Home> {
             Builder(
               builder: (context) {
                 int mode = IdleScreenContentMode.values.indexOf(idleScreenContentMode);
-                if (mode >= 2 && connected == false) mode = 1;
+                if (mode >= 2 && (connected == false || weather == null)) mode = 1;
 
                 return IgnorePointer(
                   child: AnimatedOpacity(
@@ -526,12 +563,53 @@ class HomeState extends State<Home> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
+                                Spacer(),
+                                Spacer(),
                                 Text(DateFormat("h:mm${clockShowSeconds ? ":ss" : ""} a").format(DateTime.now()), style: TextStyle(fontSize: screen.width / (mode >= 2 ? 15 : 10), color: Colors.white)),
                                 Text(DateFormat("MMMM d, yyyy").format(DateTime.now()), style: TextStyle(fontSize: screen.width / (mode >= 2 ? 30 : 20), color: Colors.white)),
-                                if (weather != null)
+                                if (mode >= 2)
+                                Spacer(),
+                                if (mode >= 2)
                                 Column(
-                                  children: [],
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Builder(
+                                            builder: (context) {
+                                              if (weather == null) return Center(child: CircularProgressIndicator());
+
+                                              Map location = weather!["data"]["location"];
+                                              Map current = weather!["data"]["current"];
+                                              DateTime lastUpdated = DateTime.fromMillisecondsSinceEpoch(current["last_updated_epoch"] * 1000, isUtc: true).toLocal();
+                                              double fontSizeBig = 40;
+                                              double fontSizeSmall = 20;
+                                          
+                                              return Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  Image.network("https:${current["condition"]["icon"]}", scale: 1 - (fontSizeBig.clamp(0, 100) / 70)),
+                                                  Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text("${current["temp_f"]}°F", style: TextStyle(fontSize: fontSizeBig, color: Colors.white)),
+                                                      Text("Feels like ${current["feelslike_f"]}°F", style: TextStyle(fontSize: fontSizeSmall, color: Colors.white)),
+                                                      Text("Wind: ${current["wind_mph"]} MPH ${current["wind_dir"]}", style: TextStyle(fontSize: fontSizeSmall, color: Colors.white)),
+                                                      Text("${location["name"]}, ${location["region"]}", style: TextStyle(fontSize: fontSizeSmall, color: Colors.white)),
+                                                      Text("Last Updated: ${DateFormat("M/dd/yyyy h:mm a").format(lastUpdated)}", style: TextStyle(fontSize: fontSizeSmall, color: Colors.white)),
+                                                    ],
+                                                  ),
+                                                ],
+                                              );
+                                            }
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
+                                Spacer(),
+                                Spacer(),
                               ],
                             ),
                           ),

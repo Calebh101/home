@@ -3,7 +3,7 @@ const http = require("http");
 const https = require("https");
 const fs = require('fs');
 const { Server } = require("socket.io");
-const { print, buildAppCommand, command, getConfig, getData, stringToBool, debug, configdir, saveData } = require("./localpkg.cjs");
+const { print, buildAppCommand, command, getConfig, getData, stringToBool, debug, configdir, saveData, serverdir } = require("./localpkg.cjs");
 const { warn } = require("console");
 const path = require("path");
 const EventEmitter = require('events');
@@ -187,9 +187,14 @@ async function init() {
             // b: parsed data from data.json
             // c: received data from socket
 
-            fs.readFile('data.json', 'utf8', (e, a) => {
+            if (!fs.existsSync(serverdir + '/data.json')) {
+                print("creating data.json");
+                fs.writeFileSync(serverdir + '/data.json', "{}", { flag: 'wx' });
+            }
+
+            fs.readFile(serverdir + '/data.json', 'utf8', (e, a) => {
                 if (e) {
-                    warn("data.json read error: " + e);
+                    warn("data.json read error (0x0): " + e);
                     return;
                 }
 
@@ -197,15 +202,15 @@ async function init() {
                     const b = JSON.parse(a);
                     b.dashboards[id] = c;
 
-                    fs.writeFile('data.json', JSON.stringify(b, null, 4), 'utf8', (e) => {
+                    fs.writeFile(serverdir + '/data.json', JSON.stringify(b, null, 4), 'utf8', (e) => {
                         if (e) {
-                            warn("data.json read error: " + e);
+                            warn("data.json read error (0x2): " + e);
                             return;
                         }
                         print("saved data from " + id);
                     });
                 } catch (e) {
-                    warn("data.json parse error: " + e);
+                    warn("data.json parse error (0x1): " + e);
                     return;
                 }
             });

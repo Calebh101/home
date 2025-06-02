@@ -15,8 +15,13 @@ log() {
     done
 }
 
-echo "Starting $app..."
-$app
+for arg in "$@"; do
+    if [[ "$arg" == "--app" ]]; then
+        echo "Starting $app..."
+        $app
+        break
+    fi
+done
 
 while true; do
     echo "Starting $script... (index: $count)"

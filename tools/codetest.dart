@@ -27,6 +27,10 @@ void main() {
     testwarn("serverHost assignment is not Host.release", file: main);
   }
 
+  if (!maincode.contains(RegExp(r'bool\??\s*useLocalHost\s*=\s*false', multiLine: true))) {
+    testwarn("useLocalHost assignment is not false", file: main);
+  }
+
   String textdart = "$approot/lib/text.dart";
   String textdartcode = File(textdart).readAsStringSync();
 

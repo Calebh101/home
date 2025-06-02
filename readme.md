@@ -113,3 +113,7 @@ There are some third-party scripts I took to use for this project or personal us
 ## 1.2.0A - 5/28/25
 
 - The home server code is officially open source! I wanted to make sure all sensitive info was contained before moving it to a public repository.
+
+## 2.0.0 - Pending
+
+- The home server release 2.0 brings new possibilities of automation and home control to your house.
