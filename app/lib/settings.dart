@@ -202,14 +202,14 @@ class _SettingsState extends State<Settings> {
                 SettingTitle(title: "Admin"),
                 Setting(title: "Update ${widget.kiosk ? "App" : "Host"}", desc: "Have the host OTA update.", action: () async {
                   if (!(await admin(context: context))) return;
-                  request(endpoint: "system/update", context: context, action: "update the host", body: {"password": adminPassword});
+                  if ((await showConfirmDialogue(context: context, title: "Are you sure?", description: "This will close the current running app and temporarily stop all services on the host.") ?? false) == false) return;
+                  await request(endpoint: "system/update", context: context, action: "update the host", body: {"password": adminPassword});
+                  showSnackBar(context, "The update was triggered.");
                 }),
                 if (widget.kiosk)
                 Setting(title: "Close App", desc: "Close the current app for debug or maintenance purposes.", action: () async {
                   if (!(await admin(context: context))) return;
-                  if ((await showConfirmDialogue(context: context, title: "Are you sure?", description: "This will close the current running app and stop certain services on the host. This is only to be used for debugging or maintenance.") ?? false) == false) {
-                    return;
-                  }
+                  if ((await showConfirmDialogue(context: context, title: "Are you sure?", description: "This will close the current running app and stop certain services on the host. This is only to be used for debugging or maintenance.") ?? false) == false) return;
 
                   print("closing app...");
                   exit(0);
