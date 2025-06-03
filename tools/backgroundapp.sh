@@ -3,7 +3,14 @@
 
 root="/var/www/home"
 logfile="$root/logs/homeapp.log"
-kioskarg=""
+kioskarg="--kiosk"
+
+for arg in "$@"; do
+    if [[ "$arg" == "--no-kiosk" ]]; then
+        kioskarg=""
+        break
+    fi
+done
 
 echo "Log file cleared!" > "$logfile"
 

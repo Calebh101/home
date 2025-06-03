@@ -16,6 +16,7 @@ import 'package:homeapp/settings.dart';
 import 'package:homeapp/text.dart';
 import 'package:homeapp/tv.dart';
 import 'package:localpkg/dialogue.dart';
+import 'package:localpkg/error.dart';
 import 'package:localpkg/functions.dart';
 import 'package:localpkg/theme.dart';
 import 'package:localpkg/logger.dart';
@@ -815,5 +816,26 @@ class Dialogue {
     showFirstTriggerDialogue(context: context, key: "$id-dialogue", title: title, ignorePrefs: override, children: List.generate(description.length, (int i) {
       return Text(description[i]);
     }));
+  }
+}
+
+enum CrashSeverity {
+  low,
+  high,
+}
+
+void CrashReport({required BuildContext context, String title = "Unexpected Error", required String text, String? trace, String code = "-1", CrashSeverity severity = CrashSeverity.low, bool showTrace = true}) {
+  String content = "There was an unexpected error running the application. Please report this error.\n\nMessage: $text\nCode: $code${showTrace ? "\n\nStack Trace:\n${trace ?? StackTrace.current}" : ""}";
+
+  switch (severity) {
+    case CrashSeverity.low:
+      showDialogue(context: context, title: title, content: Text(content));
+      break;
+
+    case CrashSeverity.high:
+      CrashScreen(message: title, description: content, code: code, close: false, support: false, retryFunction: () {
+        runApp(MyApp(debug: globalDebug, kiosk: globalKiosk));
+      });
+      break;
   }
 }

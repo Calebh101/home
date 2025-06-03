@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-
-
 import 'web.dart' as web;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:homeapp/announcements.dart';
@@ -18,14 +17,13 @@ import 'package:homeapp/settings.dart';
 import 'package:homeapp/tv.dart';
 import 'package:intl/intl.dart';
 import 'package:localpkg/dialogue.dart';
-import 'package:localpkg/error.dart';
 import 'package:localpkg/functions.dart';
 import 'package:localpkg/logger.dart';
 import 'package:localpkg/theme.dart';
 import 'package:localpkg/widgets.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-bool debugEveryInitStepWithPrompts = true;
+bool debugEveryInitStepWithPrompts = false;
 bool nightmodeEnabled = false;
 bool nightMode = false;
 bool darkMode = false;
@@ -278,31 +276,26 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       return;
     }
 
-    initPrompt("Setting variables... (0x0)");
+    initPrompt("Setting variables...");
     remotefireplaces = (await request(endpoint: "fireplace/get/available", context: context))!["fireplaces"];
-    initPrompt("Setting variables... (0x0)");
     tvs = (await request(endpoint: "devices/tvs"))!["devices"];
-    initPrompt("Setting variables... (0x1)");
     rooms = (await request(endpoint: "devices/house"))!["rooms"];
-    initPrompt("Setting variables... (0x2)");
     homekitDevices = (await request(endpoint: "devices/homekit"))!["devices"];
-    initPrompt("Setting variables... (0x3)");
     vizioapps = (await request(endpoint: "devices/tvs/vizio/apps/get"))!["apps"];
-    initPrompt("Setting variables... (0x4)");
     viziofavapps = (await request(endpoint: "devices/tvs/vizio/apps/favorites"))!["apps"];
-    initPrompt("Setting variables... (0x5)");
     calendarLists = (await request(endpoint: "calendar/lists"))!["lists"];
-    initPrompt("Setting variables... (0x6)");
 
     Map? limits = await request(endpoint: 'system/limits', context: context);
-    initPrompt("Setting variables... (0x7)");
-    await stateController.stream.first.timeout(Duration(seconds: 5));
-    initPrompt("Setting variables... (0x8)");
+    bool loadStateStream = true;
+
+    try {
+      await stateController.stream.first.timeout(Duration(seconds: 5));
+    } catch (e) {
+      warn("stateController error: $e");
+    }
 
     tvPowerStates = {};
-    initPrompt("Setting variables... (0x9)");
     vizioapps.sort((a, b) => a["name"].compareTo(b["name"]));
-    initPrompt("Setting variables... (0xA)");
 
     initPrompt("Updating things...");
     updateTvStates();
@@ -325,6 +318,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     try {
       print("initializing state stream...");
       initPrompt("Initializing state stream...");
+      if (loadStateStream == false) throw Exception("State stream will not be loaded.");
 
       stateStream = stateController.stream.listen((data) {
         currentState = data["state"];
@@ -367,9 +361,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
       print("state stream initialized");
       initPrompt("State stream initialized");
-    } catch (e) {
+    } catch (e, stack) {
       warn("state stream error: $e");
       initPrompt("State stream error: $e");
+      if (!widget.kiosk) CrashReport(context: context, text: "Could not load the state stream.", trace: "$stack");
     }
 
     print("initialization finished");
@@ -1399,7 +1394,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         ),
       );
     } else {
-      CrashScreen(message: "The server is in a bad state.", description: "The server is currently unavailable. Please report this incident.", code: "BAD_SERVER_STATUS_UNAVAILABLE", close: true);
+      CrashReport(context: context, title: "The server is in a bad state.", text: "The server is currently unavailable.", code: "BAD_SERVER_STATUS_UNAVAILABLE", severity: CrashSeverity.high);
       return Scaffold();
     }
   }
