@@ -1,12 +1,20 @@
 #!/bin/bash
-# V. 1.0.0A
+# A small script to build and deploy a new version of the home app.
+
+# Arguments:
+    # -c: Just run the code test.
 
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 root="/var/www/home"
 NO_APP_BUILD_PRESENT=false
 DEBUG=false
 
+dart run $SCRIPT_DIR/codetest.dart
+
 for arg in "$@"; do
+    if [[ "$arg" == "-c" ]]; then
+        exit 0
+    fi
     if [[ "$arg" == "--no-app-build" ]]; then
         NO_APP_BUILD_PRESENT=true
         break
@@ -17,7 +25,6 @@ for arg in "$@"; do
     fi
 done
 
-dart run $SCRIPT_DIR/codetest.dart
 echo "Starting build and deploy (debug: $DEBUG)"
 cd "$root/app"
 

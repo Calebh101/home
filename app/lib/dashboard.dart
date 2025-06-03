@@ -363,6 +363,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       print("state stream initialized");
       initPrompt("State stream initialized");
     } catch (e, stack) {
+      loadStateStream = false;
+      stateStream?.cancel();
+      stateStream = null;
+
       warn("state stream error: $e");
       initPrompt("State stream error: $e");
       CrashReport(context: context, text: "Could not load the state stream. $e", trace: "$stack");

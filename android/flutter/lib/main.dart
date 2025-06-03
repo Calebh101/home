@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:device_policy_controller/device_policy_controller.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:homeapp_android_host/online.dart';
@@ -17,10 +18,11 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:localpkg/logger.dart';
 
 String version = "1.0.0A";
-bool debug = false;
+bool debug = kDebugMode;
+bool debugHost = false;
 bool useLocalHost = true;
 bool verbose = false;
-String host = debug ? (useLocalHost ? "http://192.168.0.23" : "http://192.168.0.21") : "https://home.calebh101.com";
+String host = debugHost ? (useLocalHost ? "http://192.168.0.23" : "http://192.168.0.21") : "https://home.calebh101.com";
  
 // Most of these variables are set later by SharedPreferences. Right now they have the default value.
 // Some others are also just variables like stream controllers.
