@@ -28,7 +28,7 @@ import 'package:window_manager/window_manager.dart';
 String version = "2.0.0A";
 String homedir = "/var/www/home";
 
-bool forceKiosk = false;
+bool forceKiosk = true;
 bool forceNativeSpotify = false;
 bool allowDebugAlerts = false;
 bool alwaysShowTime = true;
@@ -47,6 +47,7 @@ bool useLocalHost = true;
 Mode mode = Mode.auto;
 Host? defaultHost = Host.debug;
 Host? serverHost;
+ThemeMode defaultKioskThemeMode = ThemeMode.dark;
 
 List globalArgs = [];
 List dialogues = [];
@@ -128,7 +129,7 @@ void main(List args, {bool debug = kDebugMode, bool kiosk = false}) {
   globalKiosk = kiosk;
 
   if (kiosk) {
-    themeMode = ThemeMode.light;
+    themeMode = defaultKioskThemeMode;
   }
 
   print("setting up initializers...");
@@ -146,7 +147,7 @@ void main(List args, {bool debug = kDebugMode, bool kiosk = false}) {
   }
 
   print("running app... (kiosk: $kiosk, debug: $debug)", releaseMode: true);
-  runApp(MyApp(debug: debug, kiosk: kiosk));
+  runApp(HomeApp(debug: debug, kiosk: kiosk));
 
   loopTimerSetup();
   socket();
@@ -310,7 +311,7 @@ Future<void> socket() async {
           int status = int.parse(message.split(' ')[1]);
           print("setting theme to status $status");
           themeMode = status == 1 ? ThemeMode.dark : ThemeMode.light;
-          runApp(MyApp(debug: globalDebug, kiosk: globalKiosk));
+          runApp(HomeApp(debug: globalDebug, kiosk: globalKiosk));
         } else if (message.contains("glucose_crash")) {
           dexcomCrash = true;
         } else if (message.contains("fireplace_sound_on")) {
@@ -342,10 +343,10 @@ void dismissAlert({required String id}) {
   print("dismissed alert: $id");
 }
 
-class MyApp extends StatelessWidget {
+class HomeApp extends StatelessWidget {
   final bool kiosk;
   final bool debug;
-  const MyApp({super.key, this.kiosk = false, required this.debug});
+  const HomeApp({super.key, this.kiosk = false, required this.debug});
 
   @override
   Widget build(BuildContext context) {
@@ -433,7 +434,7 @@ Future<Map> getConfig() async {
   return jsonDecode(content);
 }
 
-Brightness getBrightness({@Deprecated("A kiosk input is unnecessary.") bool kiosk = false, required BuildContext context, bool night = false}) {
+Brightness getBrightness({required BuildContext context, bool night = false}) {
   return (night || forceDarkTheme) ? Brightness.dark : (themeMode == ThemeMode.dark ? Brightness.dark : (themeMode == ThemeMode.light ? Brightness.light : MediaQuery.of(context).platformBrightness));
 }
 
@@ -833,7 +834,7 @@ void CrashReport({required BuildContext context, String title = "Unexpected Erro
 
       case CrashSeverity.high:
         CrashScreen(message: title, description: "$content\n$text", code: code, trace: showTrace ? "${trace ?? StackTrace.current}" : null, close: false, support: false, retryFunction: () {
-          runApp(MyApp(debug: globalDebug, kiosk: globalKiosk));
+          runApp(HomeApp(debug: globalDebug, kiosk: globalKiosk));
         });
         break;
     }

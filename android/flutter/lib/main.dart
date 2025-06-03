@@ -94,7 +94,7 @@ void main() async {
 
   connected = await checkConnectivity();
   print("running app... (standalone: $standalone)");
-  runApp(const MyApp());
+  runApp(const HomeApp());
 }
 
 Future<bool> checkConnectivity() async {
@@ -218,8 +218,8 @@ bool framesDifferent(CameraImage a, CameraImage b) {
   return false;
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class HomeApp extends StatelessWidget {
+  const HomeApp({super.key});
 
   @override
   Widget build(BuildContext context) {

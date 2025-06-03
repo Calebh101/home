@@ -106,7 +106,7 @@ class _LoginWidgetState extends State<LoginWidget> {
               if (isInvalidPasswordResponse(response, jsonDecode(response.body))) { // invalid password
                 showSnackBar(context, "Invalid password.");
               } else if (response.statusCode == 200) { // valid password
-                runApp(MyApp(debug: widget.debug, kiosk: widget.kiosk));
+                runApp(HomeApp(debug: widget.debug, kiosk: widget.kiosk));
               } else {
                 showSnackBar(context, "An unknown error occurred. (Status code: ${response.statusCode})");
               }

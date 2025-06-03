@@ -291,7 +291,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       bool loadStateStream = true;
 
       try {
-        await stateController.stream.first.timeout(Duration(seconds: 5));
+        await stateController.stream.first.timeout(Duration(seconds: 20));
       } catch (e) {
         warn("stateController.first error: $e");
         initPrompt("stateController.first: $e");
@@ -465,12 +465,19 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               top: 0,
             ),
             Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(DateFormat('h:mm a').format(DateTime.now()), style: TextStyle(fontSize: getSize(4))).gradient(colors: [GradientColor(darkMode ? Colors.white : Colors.black), GradientColor(darkMode ? Colors.grey : const Color.fromARGB(255, 21, 21, 21))]),
-                  Text(DateFormat('MMMM d, y').format(DateTime.now()), style: TextStyle(fontSize: getSize(2))),
-                ],
+              child: Builder(
+                builder: (context) {
+                  List<GradientColor> colors = [GradientColor(darkMode ? Colors.white : Colors.black), GradientColor(darkMode ? const Color.fromARGB(255, 189, 189, 189) : const Color.fromARGB(255, 21, 21, 21))];
+                  bool reverseEveryOther = true;
+
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(DateFormat('h:mm a').format(DateTime.now()), style: TextStyle(fontSize: getSize(4))).gradient(colors: colors),
+                      Text(DateFormat('MMMM d, y').format(DateTime.now()), style: TextStyle(fontSize: getSize(2))).gradient(colors: (reverseEveryOther ? colors.reversed : colors).toList()),
+                    ],
+                  );
+                }
               ),
             ),
           ],

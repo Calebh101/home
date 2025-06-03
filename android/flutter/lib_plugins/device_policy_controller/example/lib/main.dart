@@ -22,7 +22,7 @@ void main() {
   runApp(
     ChangeNotifierProvider(
       create: (context) => _statusProvider,
-      child: const MyApp(),
+      child: const HomeApp(),
     ),
   );
 }
@@ -73,8 +73,8 @@ Future<void> initKioskMode() async {
   }
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class HomeApp extends StatelessWidget {
+  const HomeApp({super.key});
 
   @override
   Widget build(BuildContext context) {
