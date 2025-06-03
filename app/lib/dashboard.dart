@@ -31,6 +31,7 @@ bool dashboardActive = false;
 double tileWidth = 100;
 double tileHeight = 70;
 double kioskmultiplier = 1;
+double webMultiplier = 1.2;
 Map musicstatus = {"status": 0};
 List alerts = [];
 double prevvolume = 0;
@@ -364,7 +365,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     } catch (e, stack) {
       warn("state stream error: $e");
       initPrompt("State stream error: $e");
-      if (!widget.kiosk) CrashReport(context: context, text: "Could not load the state stream.", trace: "$stack");
+      CrashReport(context: context, text: "Could not load the state stream. $e", trace: "$stack");
     }
 
     print("initialization finished");
@@ -599,13 +600,13 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       children: [
                         TileBox(
                           width: 3,
-                          height: 2,
+                          height: widget.kiosk ? 2 : 1,
                           rowPosition: TileRowPosition.both,
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(DateFormat('h:mm a').format(DateTime.now()), style: TextStyle(fontSize: 48)),
-                              Text(DateFormat('MMMM d, y').format(DateTime.now()), style: TextStyle(fontSize: 20)),
+                              Text(DateFormat('h:mm a').format(DateTime.now()), style: TextStyle(fontSize: widget.kiosk ? 48 : 28)),
+                              Text(DateFormat('MMMM d, y').format(DateTime.now()), style: TextStyle(fontSize: widget.kiosk ? 20 : 14)),
                             ],
                           ),
                         ),
@@ -1555,8 +1556,8 @@ class _TileBoxState extends State<TileBox> {
 
   @override
   Widget build(BuildContext context) {
-    double width = widget.width * tileWidth;
-    double height = widget.height * tileHeight;
+    double width = widget.width * tileWidth * (kIsWeb ? webMultiplier : 1);
+    double height = widget.height * tileHeight * (kIsWeb ? webMultiplier : 1);
 
     if (widget.onPressed != null || widget.hover) {
       canHover = true;

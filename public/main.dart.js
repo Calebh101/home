@@ -97304,9 +97304,9 @@ n.nM("State stream initialized")}catch(e){k=A.ad(e)
 j=A.aH(e)
 A.hL("state stream error: "+A.i(k))
 n.nM("State stream error: "+A.i(k))
-if(!n.a.c){i=n.c
+i=n.c
 i.toString
-A.aYF("-1",i,B.J9,"Could not load the state stream.","Unexpected Error",A.i(j))}}A.aK("initialization finished",!1)
+A.aYF("-1",i,B.J9,"Could not load the state stream. "+A.i(k),"Unexpected Error",A.i(j))}A.aK("initialization finished",!1)
 n.r=!0
 i=n.c
 i.toString
