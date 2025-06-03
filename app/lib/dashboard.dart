@@ -278,20 +278,31 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       return;
     }
 
-    initPrompt("Setting variables...");
+    initPrompt("Setting variables... (0x0)");
     remotefireplaces = (await request(endpoint: "fireplace/get/available", context: context))!["fireplaces"];
+    initPrompt("Setting variables... (0x0)");
     tvs = (await request(endpoint: "devices/tvs"))!["devices"];
+    initPrompt("Setting variables... (0x1)");
     rooms = (await request(endpoint: "devices/house"))!["rooms"];
+    initPrompt("Setting variables... (0x2)");
     homekitDevices = (await request(endpoint: "devices/homekit"))!["devices"];
+    initPrompt("Setting variables... (0x3)");
     vizioapps = (await request(endpoint: "devices/tvs/vizio/apps/get"))!["apps"];
+    initPrompt("Setting variables... (0x4)");
     viziofavapps = (await request(endpoint: "devices/tvs/vizio/apps/favorites"))!["apps"];
+    initPrompt("Setting variables... (0x5)");
     calendarLists = (await request(endpoint: "calendar/lists"))!["lists"];
+    initPrompt("Setting variables... (0x6)");
 
     Map? limits = await request(endpoint: 'system/limits', context: context);
+    initPrompt("Setting variables... (0x7)");
     await stateController.stream.first;
+    initPrompt("Setting variables... (0x8)");
 
     tvPowerStates = {};
+    initPrompt("Setting variables... (0x9)");
     vizioapps.sort((a, b) => a["name"].compareTo(b["name"]));
+    initPrompt("Setting variables... (0xA)");
 
     initPrompt("Updating things...");
     updateTvStates();
