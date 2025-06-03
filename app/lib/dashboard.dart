@@ -296,7 +296,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
     Map? limits = await request(endpoint: 'system/limits', context: context);
     initPrompt("Setting variables... (0x7)");
-    await stateController.stream.first;
+    await stateController.stream.first.timeout(Duration(seconds: 5));
     initPrompt("Setting variables... (0x8)");
 
     tvPowerStates = {};

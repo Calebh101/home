@@ -27,7 +27,7 @@ import 'package:window_manager/window_manager.dart';
 String version = "2.0.0A";
 String homedir = "/var/www/home";
 
-bool forceKiosk = true;
+bool forceKiosk = false;
 bool forceNativeSpotify = false;
 bool allowDebugAlerts = false;
 bool alwaysShowTime = false;
