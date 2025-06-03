@@ -477,7 +477,7 @@ packages:
     description:
       path: "."
       ref: main
-      resolved-ref: "126ddb33b994d70b91b9cede5686251a51854995"
+      resolved-ref: "2956d3da08e9e0c583a439def4bb806007ecbdb1"
       url: "https://github.com/Calebh101/localpkg-flutter.git"
     source: git
     version: "1.0.0"
@@ -721,6 +721,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.0"
+  readmore:
+    dependency: transitive
+    description:
+      name: readmore
+      sha256: e8fca2bd397b86342483b409e2ec26f06560a5963aceaa39b27f30722b506187
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.0"
   safe_local_storage:
     dependency: transitive
     description:

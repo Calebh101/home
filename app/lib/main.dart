@@ -824,18 +824,18 @@ enum CrashSeverity {
   high,
 }
 
-void CrashReport({required BuildContext context, String title = "Unexpected Error", required String text, String? trace, String code = "-1", CrashSeverity severity = CrashSeverity.low, bool showTrace = true}) {
-  String content = "There was an unexpected error running the application. Please report this error.\n\nMessage: $text\nCode: $code${showTrace ? "\n\nStack Trace:\n${trace ?? StackTrace.current}" : ""}";
+void CrashReport({required BuildContext context, String title = "Unexpected Error", required String text, String content = "There was an unexpected error running the application. Please report this error.", String? trace, String code = "-1", CrashSeverity severity = CrashSeverity.low, bool showTrace = true}) {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    switch (severity) {
+      case CrashSeverity.low:
+        showDialogue(context: context, title: title, content: Text(content));
+        break;
 
-  switch (severity) {
-    case CrashSeverity.low:
-      showDialogue(context: context, title: title, content: Text(content));
-      break;
-
-    case CrashSeverity.high:
-      CrashScreen(message: title, description: content, code: code, close: false, support: false, retryFunction: () {
-        runApp(MyApp(debug: globalDebug, kiosk: globalKiosk));
-      });
-      break;
-  }
+      case CrashSeverity.high:
+        CrashScreen(message: title, description: "$content\n$text", code: code, trace: showTrace ? "${trace ?? StackTrace.current}" : null, close: false, support: false, retryFunction: () {
+          runApp(MyApp(debug: globalDebug, kiosk: globalKiosk));
+        });
+        break;
+    }
+  });
 }

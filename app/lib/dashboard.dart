@@ -266,116 +266,131 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   }
 
   Future<void> init() async {
-    print("initializing...");
-    initPrompt("Initializing...");
-    ready = false;
-    refresh(mini: true);
-
-    if (!(await checkStatus())) {
-      ready = null;
-      refresh();
-      return;
-    }
-
-    initPrompt("Setting variables...");
-    remotefireplaces = (await request(endpoint: "fireplace/get/available", context: context))!["fireplaces"];
-    tvs = (await request(endpoint: "devices/tvs"))!["devices"];
-    rooms = (await request(endpoint: "devices/house"))!["rooms"];
-    homekitDevices = (await request(endpoint: "devices/homekit"))!["devices"];
-    vizioapps = (await request(endpoint: "devices/tvs/vizio/apps/get"))!["apps"];
-    viziofavapps = (await request(endpoint: "devices/tvs/vizio/apps/favorites"))!["apps"];
-    calendarLists = (await request(endpoint: "calendar/lists"))!["lists"];
-
-    Map? limits = await request(endpoint: 'system/limits', context: context);
-    bool loadStateStream = true;
-
     try {
-      await stateController.stream.first.timeout(Duration(seconds: 5));
-    } catch (e) {
-      warn("stateController error: $e");
-    }
+      print("initializing...");
+      initPrompt("Initializing...");
+      ready = false;
+      refresh(mini: true);
 
-    tvPowerStates = {};
-    vizioapps.sort((a, b) => a["name"].compareTo(b["name"]));
+      if (!(await checkStatus())) {
+        ready = null;
+        refresh();
+        return;
+      }
 
-    initPrompt("Updating things...");
-    updateTvStates();
-    updateHomekit();
-    updateWeather();
-    updateDeviceStates();
-    updateCalendar();
-    checkForUpdates();
+      initPrompt("Setting variables...");
+      remotefireplaces = (await request(endpoint: "fireplace/get/available", context: context))!["fireplaces"];
+      tvs = (await request(endpoint: "devices/tvs"))!["devices"];
+      rooms = (await request(endpoint: "devices/house"))!["rooms"];
+      homekitDevices = (await request(endpoint: "devices/homekit"))!["devices"];
+      vizioapps = (await request(endpoint: "devices/tvs/vizio/apps/get"))!["apps"];
+      viziofavapps = (await request(endpoint: "devices/tvs/vizio/apps/favorites"))!["apps"];
+      calendarLists = (await request(endpoint: "calendar/lists"))!["lists"];
 
-    if (limits == null) {
-      warn("limits is null");
-    } else {
-      minbrightness = limits["brightness"]["min"].toDouble();
-      maxbrightness = limits["brightness"]["max"].toDouble();
-      minvolume = limits["volume"]["min"].toDouble();
-      maxvolume = limits["volume"]["max"].toDouble();
-      prevvolume = limits["volume"]["max"].toDouble();
-    }
+      Map? limits = await request(endpoint: 'system/limits', context: context);
+      bool loadStateStream = true;
 
-    try {
-      print("initializing state stream...");
-      initPrompt("Initializing state stream...");
-      if (loadStateStream == false) throw Exception("State stream will not be loaded.");
+      try {
+        await stateController.stream.first.timeout(Duration(seconds: 5));
+      } catch (e) {
+        warn("stateController error: $e");
+      }
 
-      stateStream = stateController.stream.listen((data) {
-        currentState = data["state"];
-        currentremotefireplace = data["state"]["app"]?["fireplace"]?["active"] ?? 0;
-        remotenightmode = data["state"]["app"]?["theme"]?["nightmode"];
-        screenstate = data["state"]["screen"] == 1;
-        musicstatus = data["music"]["status"];
-        darkMode = data["state"]["app"]?["theme"]["current"] == 1;
+      tvPowerStates = {};
+      vizioapps.sort((a, b) => a["name"].compareTo(b["name"]));
 
-        if (activeSlider == 0 || volume == null || brightness == null) {
-          volume = data["state"]["volume"].toDouble();
-          brightness = data["state"]["brightness"].toDouble();
-        }
+      initPrompt("Updating things...");
+      updateTvStates();
+      updateHomekit();
+      updateWeather();
+      updateDeviceStates();
+      updateCalendar();
+      checkForUpdates();
 
-        if (!widget.kiosk && !globalDebug) {
-          alerts = data["state"]["app"]["alerts"];
-        }
+      if (limits == null) {
+        warn("limits is null");
+      } else {
+        minbrightness = limits["brightness"]["min"].toDouble();
+        maxbrightness = limits["brightness"]["max"].toDouble();
+        minvolume = limits["volume"]["min"].toDouble();
+        maxvolume = limits["volume"]["max"].toDouble();
+        prevvolume = limits["volume"]["max"].toDouble();
+      }
 
-        if (brightness! < minbrightness) brightness = minbrightness;
-        if (brightness! > maxbrightness) brightness = maxbrightness;
-        if (volume! < minvolume) volume = minvolume;
-        if (volume! > maxvolume) volume = maxvolume;
+      try {
+        print("initializing state stream...");
+        initPrompt("Initializing state stream...");
 
-        List contactsRequested = data["state"]["contacts"];
-        birthdays = [];
+        stateStream = stateController.stream.listen((data) {
+          try {
+            currentState = data["state"];
+            currentremotefireplace = data["state"]["app"]?["fireplace"]?["active"] ?? 0;
+            remotenightmode = data["state"]["app"]?["theme"]?["nightmode"];
+            screenstate = data["state"]["screen"] == 1;
+            musicstatus = data["music"]["status"];
+            darkMode = data["state"]["app"]?["theme"]["current"] == 1;
 
-        contacts = contactsRequested.isEmpty ? [] : contactsRequested.map((item) {
-          if (item["birthday"] is! DateTime) item["birthday"] = DateTime.parse(item["birthday"]);
-          return item;
-        }).toList();
+            if (activeSlider == 0 || volume == null || brightness == null) {
+              volume = data["state"]["volume"].toDouble();
+              brightness = data["state"]["brightness"].toDouble();
+            }
 
-        for (var item in contacts) {
-          if (isSameDate(item["birthday"])) {
-            birthdays.add(item);
+            if (!widget.kiosk && !globalDebug) {
+              alerts = data["state"]["app"]["alerts"];
+            }
+
+            if (brightness! < minbrightness) brightness = minbrightness;
+            if (brightness! > maxbrightness) brightness = maxbrightness;
+            if (volume! < minvolume) volume = minvolume;
+            if (volume! > maxvolume) volume = maxvolume;
+
+            List contactsRequested = data["state"]["contacts"];
+            birthdays = [];
+
+            contacts = contactsRequested.isEmpty ? [] : contactsRequested.map((item) {
+              if (item["birthday"] is! DateTime) item["birthday"] = DateTime.parse(item["birthday"]);
+              return item;
+            }).toList();
+
+            for (var item in contacts) {
+              if (isSameDate(item["birthday"])) {
+                birthdays.add(item);
+              }
+            }
+
+            refresh(mini: true);
+          } catch (e) {
+            warn("state stream error: $e");
           }
-        }
+        });
 
-        refresh(mini: true);
-      });
+        print("state stream initialized");
+        initPrompt("State stream initialized");
+      } catch (e, stack) {
+        loadStateStream = false;
+        stateStream?.cancel();
+        stateStream = null;
 
-      print("state stream initialized");
-      initPrompt("State stream initialized");
+        warn("state stream error: $e");
+        initPrompt("State stream error: $e");
+        CrashReport(context: context, text: "Could not load the state stream. $e", trace: "$stack");
+      }
+
+      if (loadStateStream == false) {
+        warn("State stream was not set up. Using fallback...");
+        stateStream = Stream.periodic(Duration(seconds: 1), (count) => count).listen((count) {
+          refresh(mini: true);
+        });
+      }
+
+      print("initialization finished");
+      ready = true;
+      showSectionDialogue(context: context, id: "main");
+      refresh();
     } catch (e, stack) {
-      loadStateStream = false;
-      stateStream?.cancel();
-      stateStream = null;
-
-      warn("state stream error: $e");
-      initPrompt("State stream error: $e");
-      CrashReport(context: context, text: "Could not load the state stream. $e", trace: "$stack");
+      warn("init error: $e");
+      CrashReport(context: context, text: "Could not initialize the dashboard. init() failed: $e", trace: "$stack", code: "INIT_ERROR", severity: CrashSeverity.high);
     }
-
-    print("initialization finished");
-    ready = true;
-    showSectionDialogue(context: context, id: "main");
-    refresh();
   }
 
   void refresh({bool mini = false}) {
