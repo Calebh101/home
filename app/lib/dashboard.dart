@@ -293,7 +293,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       try {
         await stateController.stream.first.timeout(Duration(seconds: 5));
       } catch (e) {
-        warn("stateController error: $e");
+        warn("stateController.first error: $e");
+        initPrompt("stateController.first: $e");
+        loadStateStream = false;
       }
 
       tvPowerStates = {};
