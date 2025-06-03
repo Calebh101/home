@@ -57,7 +57,7 @@ static void my_application_activate(GApplication* application) {
     gtk_window_set_title(window, "homeapp");
   }
 
-  const char* iconpath = "assets/icon/full.png";
+  const char* iconpath = "/var/www/home/android/icons/iconlight.png";
   GError* iconerror = NULL;
 
   gtk_window_set_default_size(window, 1280, 720);

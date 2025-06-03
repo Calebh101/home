@@ -25,6 +25,7 @@ import 'package:localpkg/theme.dart';
 import 'package:localpkg/widgets.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+bool debugEveryInitStepWithPrompts = true;
 bool nightmodeEnabled = false;
 bool nightMode = false;
 bool darkMode = false;
@@ -260,8 +261,14 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     return true;
   }
 
+  Future<void> initPrompt([String text = "Debugger pause called."]) async {
+    if (debugEveryInitStepWithPrompts == false) return;
+    await showDialogue(context: context, title: "Init Prompt (debugEveryInitStepWithPrompts)", content: Text(text));
+  }
+
   Future<void> init() async {
     print("initializing...");
+    initPrompt("Initializing...");
     ready = false;
     refresh(mini: true);
 
@@ -271,6 +278,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       return;
     }
 
+    initPrompt("Setting variables...");
     remotefireplaces = (await request(endpoint: "fireplace/get/available", context: context))!["fireplaces"];
     tvs = (await request(endpoint: "devices/tvs"))!["devices"];
     rooms = (await request(endpoint: "devices/house"))!["rooms"];
@@ -285,6 +293,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     tvPowerStates = {};
     vizioapps.sort((a, b) => a["name"].compareTo(b["name"]));
 
+    initPrompt("Updating things...");
     updateTvStates();
     updateHomekit();
     updateWeather();
@@ -302,44 +311,55 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       prevvolume = limits["volume"]["max"].toDouble();
     }
 
-    stateStream = stateController.stream.listen((data) {
-      currentState = data["state"];
-      currentremotefireplace = data["state"]["app"]?["fireplace"]?["active"] ?? 0;
-      remotenightmode = data["state"]["app"]?["theme"]?["nightmode"];
-      screenstate = data["state"]["screen"] == 1;
-      musicstatus = data["music"]["status"];
-      darkMode = data["state"]["app"]?["theme"]["current"] == 1;
+    try {
+      print("initializing state stream...");
+      initPrompt("Initializing state stream...");
 
-      if (activeSlider == 0 || volume == null || brightness == null) {
-        volume = data["state"]["volume"].toDouble();
-        brightness = data["state"]["brightness"].toDouble();
-      }
+      stateStream = stateController.stream.listen((data) {
+        currentState = data["state"];
+        currentremotefireplace = data["state"]["app"]?["fireplace"]?["active"] ?? 0;
+        remotenightmode = data["state"]["app"]?["theme"]?["nightmode"];
+        screenstate = data["state"]["screen"] == 1;
+        musicstatus = data["music"]["status"];
+        darkMode = data["state"]["app"]?["theme"]["current"] == 1;
 
-      if (!widget.kiosk && !globalDebug) {
-        alerts = data["state"]["app"]["alerts"];
-      }
-
-      if (brightness! < minbrightness) brightness = minbrightness;
-      if (brightness! > maxbrightness) brightness = maxbrightness;
-      if (volume! < minvolume) volume = minvolume;
-      if (volume! > maxvolume) volume = maxvolume;
-
-      List contactsRequested = data["state"]["contacts"];
-      birthdays = [];
-
-      contacts = contactsRequested.isEmpty ? [] : contactsRequested.map((item) {
-        if (item["birthday"] is! DateTime) item["birthday"] = DateTime.parse(item["birthday"]);
-        return item;
-      }).toList();
-
-      for (var item in contacts) {
-        if (isSameDate(item["birthday"])) {
-          birthdays.add(item);
+        if (activeSlider == 0 || volume == null || brightness == null) {
+          volume = data["state"]["volume"].toDouble();
+          brightness = data["state"]["brightness"].toDouble();
         }
-      }
 
-      refresh(mini: true);
-    });
+        if (!widget.kiosk && !globalDebug) {
+          alerts = data["state"]["app"]["alerts"];
+        }
+
+        if (brightness! < minbrightness) brightness = minbrightness;
+        if (brightness! > maxbrightness) brightness = maxbrightness;
+        if (volume! < minvolume) volume = minvolume;
+        if (volume! > maxvolume) volume = maxvolume;
+
+        List contactsRequested = data["state"]["contacts"];
+        birthdays = [];
+
+        contacts = contactsRequested.isEmpty ? [] : contactsRequested.map((item) {
+          if (item["birthday"] is! DateTime) item["birthday"] = DateTime.parse(item["birthday"]);
+          return item;
+        }).toList();
+
+        for (var item in contacts) {
+          if (isSameDate(item["birthday"])) {
+            birthdays.add(item);
+          }
+        }
+
+        refresh(mini: true);
+      });
+
+      print("state stream initialized");
+      initPrompt("State stream initialized");
+    } catch (e) {
+      warn("state stream error: $e");
+      initPrompt("State stream error: $e");
+    }
 
     print("initialization finished");
     ready = true;
