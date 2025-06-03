@@ -9,6 +9,9 @@ logfile="$root/logs/updatehost.log"
 count=0
 limit=10
 
+cd "$root"
+git pull
+
 log() {
     while IFS= read -r line; do
         echo "$(date -Iseconds): $line" >> "$logfile"
