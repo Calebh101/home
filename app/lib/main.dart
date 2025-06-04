@@ -28,7 +28,7 @@ import 'package:window_manager/window_manager.dart';
 String version = "2.0.0A";
 String homedir = "/var/www/home";
 
-bool forceKiosk = true;
+bool forceKiosk = false;
 bool forceNativeSpotify = false;
 bool allowDebugAlerts = false;
 bool alwaysShowTime = true;
@@ -47,7 +47,7 @@ bool useLocalHost = true;
 Mode mode = Mode.auto;
 Host? defaultHost = Host.debug;
 Host? serverHost;
-ThemeMode defaultKioskThemeMode = ThemeMode.dark;
+ThemeMode defaultKioskThemeMode = ThemeMode.dark; // experimental
 
 List globalArgs = [];
 List dialogues = [];

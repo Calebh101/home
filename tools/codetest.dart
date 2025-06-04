@@ -27,6 +27,10 @@ void main() {
     testwarn("serverHost assignment is not Host.release", file: main);
   }
 
+  if (!maincode.contains(RegExp(r'bool\??\s*forceKiosk\s*=\s*false', multiLine: true))) {
+    testwarn("forceKiosk assignment is not false", file: main);
+  }
+
   if (!maincode.contains(RegExp(r'bool\??\s*useLocalHost\s*=\s*false', multiLine: true))) {
     testwarn("useLocalHost assignment is not false", file: main);
   }

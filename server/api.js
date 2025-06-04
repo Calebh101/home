@@ -16,7 +16,6 @@ var fireplaces = getConfig().fireplaces;
 const tvs = JSON.parse(fs.readFileSync(Path.join(__dirname, 'tvs.json')));
 const tvapps = JSON.parse(fs.readFileSync(Path.join(__dirname, 'tv-apps.json')));
 const tvdata = JSON.parse(fs.readFileSync(Path.join(__dirname, 'tv-data.json')));
-const house = JSON.parse(fs.readFileSync(Path.join(__dirname, 'house.json')));
 
 // Custom .env loader
 dotenv();
@@ -924,13 +923,8 @@ function verifyAdmin(req) {
 // devices - house
 (() => {
 	router.post("/devices/house", (req, res) => {
+		const house = JSON.parse(fs.readFileSync(Path.join(__dirname, 'house.json')));
 		res.status(200).json(house);
-	});
-
-	router.post("/devices/house/state", async (req, res) => {
-		res.status(200).json({
-			"bed-c-light1": 1,
-		});
 	});
 
 	router.post("/devices/house/dashboard/:id/command", async (req, res) => {

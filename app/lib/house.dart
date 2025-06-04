@@ -11,7 +11,6 @@ import 'package:localpkg/widgets.dart';
 
 Future<void> updateDeviceStates() async {
   deviceStates = null;
-  deviceStates = await request(endpoint: "devices/house/state");
 }
 
 List<TileRow> generateRooms(BuildContext context) {
@@ -30,7 +29,7 @@ List<TileRow> generateRooms(BuildContext context) {
             rowPosition: TileRowPosition.both,
             width: 3,
             height: 0.88,
-            child: deviceStates == null ? Center(child: CircularProgressIndicator()) : Column(
+            child: Column(
               children: [
                 Text("${room["name"]}", style: TextStyle(fontSize: 20)),
                 Text("${room["id"]} - ${room["devices"].length} Device${room["devices"].length == 1 ? "" : "s"}"),
@@ -67,10 +66,12 @@ List<TileRow> generateRooms(BuildContext context) {
                 children: [
                   Text("${device["device"].name}", style: TextStyle(fontSize: 20)),
                   Text("$id - ${device["device"].type}", style: TextStyle(fontSize: 12)),
-                  Expanded(child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: (device["widget"] as Widget),
-                  )),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: device["widget"],
+                    ),
+                  ),
                 ],
               ),
             );
@@ -92,6 +93,12 @@ Map getDeviceDashboard({required Map data, required BuildContext context}) {
     case "dashboard":
       device = Device(name: data["name"], id: data["id"], type: DeviceType.dashboard, data: data);
       widget = DashboardDevice(device: device);
+      height = 2.5;
+      break;
+    
+    case "relay-2":
+      device = Device(name: data["name"], id: data["id"], type: DeviceType.dashboard, data: data);
+      widget = DualRelaySwitchDevice();
       height = 2.5;
       break;
 
@@ -312,5 +319,33 @@ Color getColorForBatteryLevel(int value) {
     return Colors.orange;
   } else {
     return Colors.red;
+  }
+}
+
+class RelaySwitchDevice extends StatefulWidget {
+  const RelaySwitchDevice({super.key});
+
+  @override
+  State<RelaySwitchDevice> createState() => _RelaySwitchDeviceState();
+}
+
+class _RelaySwitchDeviceState extends State<RelaySwitchDevice> {
+  @override
+  Widget build(BuildContext context) {
+    return const Placeholder();
+  }
+}
+
+class DualRelaySwitchDevice extends StatefulWidget {
+  const DualRelaySwitchDevice({super.key});
+
+  @override
+  State<DualRelaySwitchDevice> createState() => _DualRelaySwitchDeviceState();
+}
+
+class _DualRelaySwitchDeviceState extends State<DualRelaySwitchDevice> {
+  @override
+  Widget build(BuildContext context) {
+    return const Placeholder();
   }
 }

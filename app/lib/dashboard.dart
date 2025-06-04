@@ -467,8 +467,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
             Center(
               child: Builder(
                 builder: (context) {
-                  List<GradientColor> colors = [GradientColor(darkMode ? Colors.white : Colors.black), GradientColor(darkMode ? const Color.fromARGB(255, 189, 189, 189) : const Color.fromARGB(255, 21, 21, 21))];
+                  bool darkMode = getBrightness(context: context) == Brightness.dark;
                   bool reverseEveryOther = true;
+                  List<GradientColor> colors = [GradientColor(darkMode ? Colors.white : Colors.black), GradientColor(darkMode ? const Color.fromARGB(255, 189, 189, 189) : const Color.fromARGB(255, 21, 21, 21))];
 
                   return Column(
                     mainAxisAlignment: MainAxisAlignment.center,

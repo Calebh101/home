@@ -217,7 +217,7 @@ function parseNumber(str) {
 async function reloadAllDatabases() {
   try {
     print("database reload: start");
-    await Promise.all([refreshAnnouncements(), refreshContacts()]);
+    await Promise.all([refreshAnnouncements(), refreshContacts(), refreshDevices()]);
     const data = getData();
     data.lastRefreshed = new Date().toISOString();
     saveData(data);
@@ -226,6 +226,60 @@ async function reloadAllDatabases() {
     warn("database reload: error: " + e);
     return false;
   }
+}
+
+async function refreshDevices() {
+  print("refreshing devices...");
+  var results = [];
+  var rooms = [];
+
+  var response = await notion.databases.query({
+    database_id: process.env.DEVICES_DATABASE,
+  });
+
+  results.push(...response.results);
+
+  // pagination
+  while (response.has_more) {
+    response = await notion.databases.query({
+      database_id: databaseId,
+      start_cursor: response.next_cursor,
+    });
+    results.push(...response.results);
+  }
+
+  const devices = await Promise.all(results.map(async (page, i) => {
+    function getSelectProperty(property) {
+      return page.properties[property].select.name;
+    }
+
+    function getStringProperty(property) {
+      return page.properties[property][page.properties[property].type][0].plain_text;
+    }
+
+    const type = getSelectProperty("Type");
+    const room = getSelectProperty("Room");
+    const name = getStringProperty("Name");
+    const id = getStringProperty("ID");
+    const index = rooms.findIndex(item => item.name === name);
+
+    const device = {
+      "name": name,
+      "id": id,
+      "type": type,
+    };
+
+    if (index === -1) {
+      rooms.push({"name": room, "id": room.toLowerCase().replace(/[^a-zA-Z0-9 ]/g, '').replaceAll(" ", "-"), "devices": [device]});
+    } else {
+      rooms[index].devices.push(device);
+    }
+
+    return device;
+  }));
+
+  print("saved " + rooms.length + " rooms and " + devices.length + " devices");
+  fs.writeFileSync(serverdir + "/house.json", JSON.stringify({"rooms": rooms}));
 }
 
 async function refreshAnnouncements() {
