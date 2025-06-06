@@ -5,12 +5,15 @@ const Path = require('path');
 const https = require('https');
 
 print("vizio: initializing");
-const tvs = JSON.parse(fs.readFileSync(Path.join(__dirname, 'tvs.json')));
 const tvdata = JSON.parse(fs.readFileSync(Path.join(__dirname, 'tv-data.json')));
 const tvapps = JSON.parse(fs.readFileSync(Path.join(__dirname, 'tv-apps.json')));
 
+function tvs() {
+    return JSON.parse(fs.readFileSync(Path.join(__dirname, 'tvs.json'))).tvs;
+}
+
 function getTv(id) {
-    tv = tvs.devices.find(item => item.id === id && item.type === "vizio");
+    tv = tvs().find(item => item.id === id && item.type === "vizio");
     return tv;
 }
 

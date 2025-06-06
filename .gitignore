@@ -2,7 +2,7 @@ logs/**
 temp/**
 cert/**
 frames/**
-node_modules/**
+node_modules
 
 .env
 debug.log
@@ -13,3 +13,5 @@ server/homekit-pairing.json
 server/homekit-data.json
 server/calendar.json
 server/house.json
+server/accounts.json
+

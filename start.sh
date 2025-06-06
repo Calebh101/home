@@ -8,14 +8,24 @@ logfile="$root/logs/server.log"
 
 limit=10
 args=()
+debug=false
+log=false
 
 cd "$root"
 git pull
+clearlog
 
 log() {
     while IFS= read -r line; do
-        echo "$(date -Iseconds): $line" >> "$logfile"
+        echo "$line"
+        if $log; then
+            echo "$line" >> "$logfile"
+        fi
     done
+}
+
+clearlog() {
+    echo "$(date -Iseconds): Log cleared" > "$logfile"
 }
 
 argcheck() {
@@ -32,18 +42,54 @@ for arg in "$@"; do
         echo "Starting $app..."
         $app
     fi
+    if [[ "$arg" == "--debug" ]]; then
+        echo "Loading debug..."
+        debug=true
+    fi
+
     argcheck "--override-verify" "$arg"
 done
 
 arginput=$(IFS=" "; echo "${args[*]}")
 count=0
 
-while true; do
-    echo "Starting $script... (index: $count) (command: $script $arginput"
-    node "$script" "$arginput"
+background_reset() {
+    while true; do
+        count=0
+        echo "Set count to $count"
+        sleep 600
+    done
+}
 
+background_reset &
+bg_pid=$!
+trap "kill $bg_pid" EXIT
+
+while true; do
+    echo "Starting $script... (index: $count) (command: $script $arginput)"
     seconds=0
-    code=$?
+
+    if $debug; then
+        node "$script" "$arginput" | log &
+        app_pid=$!
+        inotifywait -q -e modify,create,delete -r --include '.*\.js$' "$root/server" &
+        watch_pid=$!
+        wait -n $app_pid $watch_pid
+        result=$?
+
+        if ! kill -0 $app_pid 2>/dev/null; then
+            wait $app_pid
+            code=$?
+        else
+            echo "File change detected. Stopping app..."
+            kill $app_pid
+            wait $app_pid
+            code=0
+        fi
+    else
+        node "$script" "$arginput" | log
+        code=$?
+    fi
 
     if [[ $code -ne 0 ]]; then
         seconds=5
@@ -51,7 +97,7 @@ while true; do
 
         if [ "$count" -eq 10 ]; then
             echo "Server hit $count bad restarts! Stopping..."
-            break;
+            break
         fi
     fi
 

@@ -15,6 +15,7 @@ import 'package:localpkg/dialogue.dart';
 import 'package:localpkg/logger.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
+import 'package:flutter_dotenv/flutter_dotenv.dart' as dotenv;
 
 String? zip;
 bool secureWebsocket = true;
@@ -46,6 +47,7 @@ Future<void> init(String? id, {required HomeState widget}) async {
     .setTransports(['websocket'])
     .setPath('/dashboardstate')
     .setQuery({"id": id})
+    .setExtraHeaders({"auth": dotenv.DotEnv().env["ACCESS_CODE"]}) // Use the access code for verification.
     .build());
 
   print("socket built");
@@ -239,7 +241,7 @@ String getBaseUrl({bool websocket = false}) {
 }
 
 bool isInvalidPasswordResponse(http.Response response, Map body) {
-  return response.statusCode == 403 && body["code"] == "ATV x1";
+  return response.statusCode == 403 && body["code"] == "ATV x3";
 }
 
 class WebsocketOverrides extends HttpOverrides {
@@ -292,6 +294,7 @@ Future<Map?> request({required String endpoint, Map<String, String>? headers, Ma
   String baseurl = getBaseUrl();
   headers ??= {'Content-Type': 'application/json'};
   body ??= {};
+  body["auth"] = dotenv.DotEnv().env["ACCESS_CODE"];
 
   Uri url = Uri.parse("$baseurl/public/$endpoint");
   if (silentLogging == false || verbose) print("request: requesting url $url with body $body");
@@ -309,6 +312,7 @@ Future<Map?> request({required String endpoint, Map<String, String>? headers, Ma
       return result;
     } else if (isInvalidPasswordResponse(response, result)) {
       warn("invalid password response received");
+      globalerror = "Access code invalid.";
       if (context != null && context.mounted) showSnackBar(context, "Unable to $action. Invalid password.");
     } else {
       if (result.containsKey('error')) {

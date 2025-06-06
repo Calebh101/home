@@ -16,11 +16,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:localpkg/logger.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart' as dotenv;
 
 String version = "1.0.0A";
 bool debug = kDebugMode;
 bool debugHost = false;
-bool useLocalHost = true;
+bool useLocalHost = false;
 bool verbose = false;
 String host = debugHost ? (useLocalHost ? "http://192.168.0.23" : "http://192.168.0.21") : "https://home.calebh101.com";
  
@@ -45,7 +46,7 @@ StreamController cameraStream = StreamController.broadcast();
 String? globalerror;
 int stateUpdateInterval = 2000; // ms
 bool? connected;
-bool clockShowSeconds = true;
+bool clockShowSeconds = false;
 bool alignToMillisecond = true; // increases accuracy of the timer
 IdleScreenContentMode idleScreenContentMode = IdleScreenContentMode.none;
 Map? weather;
@@ -61,6 +62,7 @@ void main() async {
   print("initializing app...");
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky); // Make the app go into fullscreen anda hide controls.
+  dotenv.DotEnv().load(); // Load environmental variables.
 
   await setupPrefs();
   initWeather();

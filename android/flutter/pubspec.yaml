@@ -54,6 +54,8 @@ dependencies:
   device_info_plus: ^11.4.0
   intl: ^0.20.2
   geocoding: ^4.0.0
+  dotenv: ^4.2.0
+  flutter_dotenv: ^5.2.1
 
 dev_dependencies:
   flutter_test:

@@ -1,4 +1,4 @@
-const { print, warn, log, debug, notfound, dotenv, getData, saveData, getConfig, getClient, configdir, buildAppCommand, command, reloadAllDatabases, parseNumber, version } = require('./localpkg.cjs');
+const { print, warn, log, debug, notfound, dotenv, getData, saveData, getConfig, getClient, configdir, buildAppCommand, command, reloadAllDatabases, parseNumber, version, serverdir } = require('./localpkg.cjs');
 const express = require('express');
 const router = express.Router();
 const fs = require('fs');
@@ -13,7 +13,6 @@ var maxvolume = getConfig().limits.maxvolume;
 var dexcomSessionToken;
 var fireplaces = getConfig().fireplaces;
 
-const tvs = JSON.parse(fs.readFileSync(Path.join(__dirname, 'tvs.json')));
 const tvapps = JSON.parse(fs.readFileSync(Path.join(__dirname, 'tv-apps.json')));
 const tvdata = JSON.parse(fs.readFileSync(Path.join(__dirname, 'tv-data.json')));
 
@@ -764,7 +763,8 @@ function verifyAdmin(req) {
 	}
 
 	router.post("/devices/tvs", (req, res) => {
-		res.status(200).json(tvs);
+		const tvs = JSON.parse(fs.readFileSync(Path.join(serverdir, 'tvs.json'))).tvs;
+		res.status(200).json({"devices": tvs});
 	});
 
 	router.post("/devices/tvs/vizio/settings/set", async (req, res) => {
@@ -804,7 +804,7 @@ function verifyAdmin(req) {
 	});
 
 	if (debug) {
-		print("setting up debug tv commands...");
+		print("setting up debug tv command endpoint...");
 		router.post("/devices/tvs/vizio/command", async (req, res) => {
 			if (verify(req, "vizio") == false) return res.status(400).json({"error": "fail"});
 			const response = (await vizio.request(req.body.id, req.body.endpoint, req.body.method, req.body.body));

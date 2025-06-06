@@ -42,7 +42,7 @@ bool showRefreshOnWeatherWidget = false;
 bool hostHasScreen = true;
 bool useIconsForTabs = true;
 bool useAutomation = false;
-bool useLocalHost = true;
+bool useLocalHost = false;
 
 Mode mode = Mode.auto;
 Host? defaultHost = Host.debug;

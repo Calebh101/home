@@ -28490,15 +28490,15 @@ aJ6:function aJ6(a){this.a=a},
 aJ7:function aJ7(a){this.a=a},
 aJ8:function aJ8(a){this.a=a},
 aJ9:function aJ9(a){this.a=a},
-aRd(a,b){var s,r="http"
-if($.vK)s=(b?"wss":r)+"://localhost"
+aRd(a,b){var s
+if($.vK)s=(b?"wss":"http")+"://localhost"
 else{s=$.qY
 if(s===B.pN)s=B.l1
 else if(!(a==null))s=a
-if(s===B.l1)s=(b?"wss":r)+"://192.168.0.21"
+if(s===B.l1)s=(b?"wss":"http")+"://192.168.0.21"
 else{if(b)s="wss"
-else s=r
-s+="://192.168.0.23"}}return s},
+else s="https"
+s+="://home.calebh101.com"}}return s},
 bZ(a,b,c,d,e,f,g){var s=null
 return A.bmn(a,b,c,d,e,f,g)},
 bmn(a,b,a0,a1,a2,a3,a4){var s=0,r=A.r(t.Xw),q,p=2,o=[],n,m,l,k,j,i,h,g,f,e,d,c

@@ -18,6 +18,7 @@ const path = require('path');
 const cors = require('cors');
 const cron = require('node-cron');
 const { spawn } = require('child_process');
+const auth = require('./auth.js');
 
 const app = express();
 const wwwroot = path.join(path.resolve(__dirname, '..'), 'public');
@@ -54,7 +55,6 @@ if (secure) {
   const options = {
     cert: fs.readFileSync(path.resolve(configdir + '/cert/cert.pem')),
     key: fs.readFileSync(path.resolve(configdir + '/cert/key.pem')),
-    //passphrase: fs.readFileSync(path.resolve(configdir + '/cert/pass.txt'), 'utf8').trim(),
   };
 
   print("setting up http server (server)...");
@@ -70,6 +70,7 @@ if (secure) {
 require("dotenv").config();
 print("server (version: " + version + ") (debug: " + debug + ") (wwwroot: " + wwwroot + ")");
 
+app.set('trust proxy', true);
 app.use(cors());
 app.options('*', cors());
 
@@ -82,9 +83,18 @@ app.options('*', (req, res) => {
 
 app.use(cmiddle);
 app.use(cparser);
-app.use(verify);
+
+app.use(async (req, res, next) => {
+  const result = await auth.verify(req);
+  if (result.status) {
+    next();
+  } else {
+    warn("request blocked: " + result.reason);
+  }
+});
 
 print("generating routes...");
+app.use('/auth', auth.routes);
 app.use('/api', require('./api.js'));
 app.use('/public', require('./public.api.js'));
 app.use(express.static(wwwroot));

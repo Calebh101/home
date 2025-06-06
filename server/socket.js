@@ -7,6 +7,7 @@ const { print, buildAppCommand, command, getConfig, getData, stringToBool, debug
 const { warn } = require("console");
 const path = require("path");
 const EventEmitter = require('events');
+const auth = require('./auth.js');
 
 class StreamController extends EventEmitter {
   send(data) {
@@ -28,9 +29,7 @@ var controller = new StreamController();
 
 async function stateCommand(cmd, service = "state.status") {
     var out;
-    await command(null, cmd, service, (stdout) => {
-        out = stdout;
-    }, true, true);
+    await command(null, cmd, service, (stdout) => out = stdout, true, true);
     return out;
 }
 
@@ -144,8 +143,17 @@ async function init() {
     });
 
     stateIo.on("connection", async (socket) => {
+        socket.verified = false;
         print("connect: " + socket.id);
         socket.emit("update", await getState());
+
+        if (await auth.verifySocket(socket.handshake)) {
+            print("socket verified");
+            socket.verified = true;
+        } else {
+            socket.emit("update", {"code": "ATV x3"});
+            socket.disconnect(true);
+        }
 
         socket.on("disconnect", () => {
             print("disconnect: " + socket.id);
@@ -153,7 +161,11 @@ async function init() {
     });
 
     setInterval(async () => {
-        stateIo.emit("update", await getState());
+        const state = await getState();
+        for (const [id, socket] of stateIo.sockets.sockets) {
+            if (socket.verified !== true) continue;
+            socket.emit("update", state);
+        }
     }, getConfig().server.statedumpinterval * 1000);
 
     dashboardIo = new Server(server, {
@@ -168,6 +180,14 @@ async function init() {
     dashboardIo.on("connection", async (socket) => {
         const id = socket.handshake.query.id;
         print("device connected: " + id);
+
+        if (req.headers.auth == process.env.DASHBOARD_CODE) {
+            print("stream.dashboardstate.verify: true");
+        } else {
+            print("stream.dashboardstate.verify: false (x3)");
+            socket.emit("update", {"code": "ATV x3"});
+            socket.disconnect(true);
+        }
 
         if (id == null || id == undefined || id == "" || dashboardIds.includes(id)) {
             print("invalid device id: " + id);

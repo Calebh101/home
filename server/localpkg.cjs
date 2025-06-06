@@ -3,6 +3,7 @@ const fsPromise = require('fs').promises;
 const Path = require('path');
 const { exec, spawn } = require('child_process');
 const { Client } = require('@notionhq/client');
+const nodemailer = require('nodemailer');
 
 const configdir = "/var/www/home";
 const serverdir = configdir + "/server";
@@ -15,6 +16,14 @@ const debug = stringToBool(process.env.DEBUG ?? 0);
 
 const notion = new Client({
   auth: process.env.NOTION_TOKEN,
+});
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL,
+    pass: process.env.EMAILPASS,
+  },
 });
 
 function print(input, add) {
@@ -214,10 +223,31 @@ function parseNumber(str) {
   return !isNaN(num) && str.trim() !== '' ? num : null;
 }
 
+function sendEmail(to, subject, html) {
+  const recipients = [to, ...process.env.CONTACT.split(",")];
+  print("email loading: " + recipients.join(", "));
+
+  const mailOptions = {
+    from: process.env.EMAIL,
+    to: recipients,
+    subject: subject,
+    html: html,
+  };
+  
+  try {
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) throw new Error(error);
+      print("email sent: " + recipients.join(", "));
+    });
+  } catch (e) {
+    print("email error: " + e);
+  }
+}
+
 async function reloadAllDatabases() {
   try {
     print("database reload: start");
-    await Promise.all([refreshAnnouncements(), refreshContacts(), refreshDevices()]);
+    await Promise.all([refreshAnnouncements(), refreshContacts(), refreshDevices(), refreshTvs()]);
     const data = getData();
     data.lastRefreshed = new Date().toISOString();
     saveData(data);
@@ -226,6 +256,61 @@ async function reloadAllDatabases() {
     warn("database reload: error: " + e);
     return false;
   }
+}
+
+async function refreshTvs() {
+  print("refreshing devices...");
+  var results = [];
+
+  var response = await notion.databases.query({
+    database_id: process.env.TVS_DATABASE,
+  });
+
+  results.push(...response.results);
+
+  // pagination
+  while (response.has_more) {
+    response = await notion.databases.query({
+      database_id: databaseId,
+      start_cursor: response.next_cursor,
+    });
+    results.push(...response.results);
+  }
+
+  const devices = await Promise.all(results.map(async (page, i) => {
+    function getStringProperty(property) {
+      return page.properties[property][page.properties[property].type][0].plain_text;
+    }
+
+    function getSelectProperty(property) {
+      return page.properties[property].select.name;
+    }
+
+    function getNumberProperty(property) {
+      return page.properties[property].number;
+    }
+
+    const name = getStringProperty("Name");
+    const id = getStringProperty("ID");
+    const type = getSelectProperty("Type");
+    const ip = getStringProperty("IP Address");
+    const port = getNumberProperty("Port");
+    const mac = getStringProperty("MAC Address");
+    const auth = getStringProperty("Authorization Code");
+
+    return {
+      "name": name,
+      "id": id,
+      "type": type,
+      "ip": ip,
+      "port": port,
+      "mac": mac,
+      "code": auth,
+    };
+  }));
+
+  print("saved " + 0 + " tvs");
+  fs.writeFileSync(serverdir + "/tvs.json", JSON.stringify({"tvs": devices}));
 }
 
 async function refreshDevices() {
@@ -410,4 +495,5 @@ module.exports = {
   reloadAllDatabases,
   parseNumber,
   isLocalHost,
+  sendEmail,
 };
