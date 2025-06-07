@@ -9,17 +9,17 @@ const salts = 10;
 const file = serverdir + "/accounts.json";
 const args = require('minimist')(process.argv.slice(2));
 
+if (!fs.existsSync(file)) {
+    print("creating " + file);
+    fs.writeFileSync(file, JSON.stringify({"sessions": [], "users": []}), { flag: 'wx' });
+}
+
 (() => {
     const data = getAuthData();
     data.sessions ??= [];
     data.users ??= [];
     saveAuthData(data);
 })();
-
-if (!fs.existsSync(file)) {
-    print("creating " + file);
-    fs.writeFileSync(file, JSON.stringify({"sessions": [], "users": []}), { flag: 'wx' });
-}
 
 async function filterSessions() {
     const data = await getAuthDataAsync();
