@@ -5,6 +5,7 @@
 # -a: Reopen app as well
 
 dir="/var/www/home"
+serverdir="$dir/server"
 logfile="$dir/logs/updatehost.log"
 
 log() {
@@ -26,7 +27,9 @@ mkdir "$dir/logs" > /dev/null 2>&1 # Create the directory if it doesn't exist
 echo "Updating... (directory: $dir) (logfile: $logfile)" 2>&1 | log
 pkill homeapp 2>&1 | log
 cd "$dir" 2>&1 | log
-git pull 2>&1 | log/home/$user/.Xauthority
+git pull 2>&1 | log
+cd "$serverdir" 2>&1 | log
+sudo npm install 2>&1 | log
 
 for arg in "$@"; do
     if [[ "$arg" == "-a" ]]; then
