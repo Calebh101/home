@@ -2,6 +2,8 @@
 # A simple script to replace pm2.
 
 root="/var/www/home"
+serverdir="$root/server"
+
 script="$root/server/server.js"
 app="$root/tools/backgroundapp.sh"
 logfile="$root/logs/server.log"
@@ -50,6 +52,12 @@ for arg in "$@"; do
     argcheck "--override-verify" "$arg"
 done
 
+if [ "$debug" = false ]; then
+    cd "$serverdir"
+    echo "Requesting sudo permissions for npm install..."
+    sudo npm install
+fi
+
 arginput=$(IFS=" "; echo "${args[*]}")
 count=0
 
@@ -67,29 +75,10 @@ trap "kill $bg_pid" EXIT
 
 while true; do
     echo "Starting $script... (index: $count) (command: $script $arginput)"
+    node "$script" "$arginput" | log
+
+    code=$?
     seconds=0
-
-    if $debug; then
-        node "$script" "$arginput" | log &
-        app_pid=$!
-        inotifywait -q -e modify,create,delete -r --include '.*\.js$' "$root/server" &
-        watch_pid=$!
-        wait -n $app_pid $watch_pid
-        result=$?
-
-        if ! kill -0 $app_pid 2>/dev/null; then
-            wait $app_pid
-            code=$?
-        else
-            echo "File change detected. Stopping app..."
-            kill $app_pid
-            wait $app_pid
-            code=0
-        fi
-    else
-        node "$script" "$arginput" | log
-        code=$?
-    fi
 
     if [[ $code -ne 0 ]]; then
         seconds=5

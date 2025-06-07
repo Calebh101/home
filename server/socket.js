@@ -110,6 +110,10 @@ async function getState() {
     }
 }
 
+function updater() {
+    auth.filterSessions();
+}
+
 async function init() {
     print("setting up sockets on port " + port);
     const app = express();
@@ -122,9 +126,8 @@ async function init() {
     const options = {
         cert: fs.readFileSync(path.resolve(configdir + '/cert/cert.pem')),
         key: fs.readFileSync(path.resolve(configdir + '/cert/key.pem')),
-        //passphrase: fs.readFileSync(path.resolve(configdir + '/cert/pass.txt'), 'utf8').trim(),
-        requestCert: false,
-        rejectUnauthorized: false,
+        requestCert: !debug,
+        rejectUnauthorized: debug,
     };
 
     if (secure) {
@@ -161,6 +164,7 @@ async function init() {
     });
 
     setInterval(async () => {
+        updater();
         const state = await getState();
         for (const [id, socket] of stateIo.sockets.sockets) {
             if (socket.verified !== true) continue;

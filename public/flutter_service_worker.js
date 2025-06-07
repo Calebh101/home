@@ -2137,7 +2137,7 @@ const RESOURCES = {"assets/assets/icon/full.png": "27e3c743973c119c72dfd8190e64e
 "canvaskit/chromium/canvaskit.js.symbols": "f7c5e5502d577306fb6d530b1864ff86",
 "canvaskit/chromium/canvaskit.wasm": "c054c2c892172308ca5a0bd1d7a7754b",
 "canvaskit/canvaskit.wasm": "a37f2b0af4995714de856e21e882325c",
-"flutter_bootstrap.js": "d455b222f1717fb3dd666ed0d8e96580",
+"flutter_bootstrap.js": "8048ae26e18d4c792ba5c203d59d7248",
 "main.dart.js": "34656107fd141d2a807c76a3e6fe5178",
 "splash/img/dark-1x.png": "f41dc38f09c1194ac47f556d250b9152",
 "splash/img/light-3x.png": "32ee569fd260c76807dbdef22f49af9c",

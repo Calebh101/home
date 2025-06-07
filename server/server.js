@@ -90,11 +90,12 @@ app.use(async (req, res, next) => {
     next();
   } else {
     warn("request blocked: " + result.reason);
+    return res.status(403).json({"error": result.reason, "code": "ATV x3"});
   }
 });
 
 print("generating routes...");
-app.use('/auth', auth.routes);
+app.use('/auth', auth.routes());
 app.use('/api', require('./api.js'));
 app.use('/public', require('./public.api.js'));
 app.use(express.static(wwwroot));
