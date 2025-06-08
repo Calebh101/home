@@ -112,28 +112,6 @@ function logger(service, log, progress = true) {
   };
 }
 
-function verify(req, res, next) {
-  if (!req.path.startsWith("/api")) {
-    print("verify client: (path: " + req.path + ") = true");
-    return next();
-  }
-
-  const accessCode = req.headers["authentication"];
-  const password = req.headers["password"];
-  const override = args["override-verify"] == true;
-  const isLocal = isLocalHost(req);
-  const status = (accessCode == process.env.ACCESS_CODE && password == process.env.PASSWORD) || override || isLocal;
-  const log = "verify client: (access code match: " + (accessCode == process.env.ACCESS_CODE) + ") (password match: " + (password == process.env.PASSWORD) + ") (client vs server: " + accessCode + " : " + process.env.ACCESS_CODE + ") (override: " + override + ") (isLocal: " + isLocal + ") = " + status;
-
-  if (status) {
-    print(log);
-    next();
-  } else {
-    warn(log);
-    res.status(403).json({"error":"access denied", "code": "ATV x2"});
-  }
-}
-
 async function cmiddle(req, res, next) {
   const client = getClient(req);
   const launch = getConfig().server;

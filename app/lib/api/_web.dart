@@ -33,3 +33,8 @@ void reload() {
   print("reloading page... (reload: $reloads)");
   web.window.location.href = "$uri";
 }
+
+void classicReload() {
+  print("reloading page... (classic)");
+  web.window.location.href = "${Uri.base}";
+}

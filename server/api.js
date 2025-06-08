@@ -7,6 +7,7 @@ const nodemailer = require('nodemailer');
 const axios = require('axios');
 const Path = require('path');
 const vizio = require('./vizio.js');
+const { getSession, validateString, getUserById, checkUser, getAuthData } = require('./auth.js');
 
 var minbrightness = 5;
 var maxvolume = getConfig().limits.maxvolume;
@@ -33,7 +34,7 @@ function verifyAdmin(req) {
 // system
 (() => {
 	router.post("/check", (req, res) => {
-		res.status(200).json({});
+		res.status(410).json({"error": "This endpoint has been removed in favor of a stronger method of authentication.", "code": "DEPRECATE_AUTH"});
 	});
 
 	router.post("/system/admin/check", (req, res) => {
@@ -183,6 +184,58 @@ function verifyAdmin(req) {
 			res.status(500).json({"error": "internal server error"});
 		}
 	});
+})();
+
+// user
+(() => {
+    router.post("/user/info", async (req, res) => {
+        const session = getSession(req.headers.authentication);
+        if (session == null) return res.status(403).json({"error": "invalid session"});
+        const user = getUserById(session.user);
+        if (user == null) return res.status(403).json({"error": "invalid user"});
+
+        return res.status(200).json({
+            "firstName": user.firstName,
+            "lastName": user.lastName,
+        });
+    });
+
+	router.post("/user/testPassword", async (req, res) => {
+        if (!validateString(req.body.password)) return res.status(200).json({"status": false});
+        const session = getSession(req.headers.authentication);
+        if (session == null) return res.status(200).json({"status": false});
+        const user = getUserById(session.user);
+        if (user == null) return res.status(200).json({"status": false});
+        if (!(await checkUser(user, req.body.password))) return res.status(200).json({"status": false});
+		res.status(200).json({"status": true});
+	});
+
+    router.post("/user/getSessions", async (req, res) => {
+        if (!validateString(req.body.password)) return res.status(400).json({"error": "invalid parameters"});
+        const session = getSession(req.headers.authentication);
+        if (session == null) return res.status(403).json({"error": "invalid session"});
+        const user = getUserById(session.user);
+        if (user == null) return res.status(403).json({"error": "invalid user"});
+        if (!(await checkUser(user, req.body.password))) return res.status(403).json({"error": "invalid password"});
+
+        const sessions = getAuthData().sessions.filter(item => item.user == user.id && item.active == true).map(item => {
+			return {"created": item.created, "device": item.device, "location": item.location};
+		});
+
+        print("found " + sessions.length + " sessions for user " + user.id);
+        return res.status(200).json({"sessions": sessions});
+    });
+
+    router.post("/user/deactivateSession", async (req, res) => {
+        if (!validateString(req.body.sessionCode) || !validateString(req.body.password)) return res.status(400).json({"error": "invalid parameters"});
+        const session = getSession(req.body.sessionCode);
+        if (session == null) return res.status(403).json({"error": "invalid session"});
+        const user = getUserById(session.user);
+        if (user == null) return res.status(403).json({"error": "invalid user"});
+        if (!(await checkUser(user, req.body.password))) return res.status(403).json({"error": "invalid password"});
+        verifySession(session,id, false);
+        return res.status(200).json({"success": "deactivated"});
+    });
 })();
 
 // alerts

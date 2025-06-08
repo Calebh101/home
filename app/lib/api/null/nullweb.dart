@@ -1,5 +1,13 @@
 // Stub file: null.web
 
-void reload() {
+void _handle() {
   throw UnsupportedError("Web activities were called on a null file.");
+}
+
+void reload() {
+  _handle();
+}
+
+void classicReload() {
+  _handle();
 }

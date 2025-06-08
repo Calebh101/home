@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:homeapp/account.dart';
 import 'package:homeapp/dashboard.dart';
 import 'package:homeapp/internettest.dart';
 import 'package:homeapp/main.dart';
@@ -195,6 +196,40 @@ class _SettingsState extends State<Settings> {
               SharedPreferences prefs = await SharedPreferences.getInstance();
               prefs.clear();
               showSnackBar(context, "Cleared all settings and data!");
+            }),
+            SettingTitle(title: "Account"),
+            Setting(title: "Manage Account", desc: "Manage your account, like your password and where you're logged in.", action: () async {
+              print("starting account manager");
+              bool status = false;
+
+              while (status == false) {
+                if (accountPassword == null) {
+                  status = false;
+                } else {
+                  status = (await request(endpoint: "user/testPassword", body: {"password": accountPassword}))?["status"] ?? false;
+                }
+
+                if (status == false) {
+                  if (((await showDialogue(context: context, title: "Enter Your Password", content: AccountPasswordInput())) ?? false) == false) {
+                    status == false;
+                  print("breaking: $status");
+                    break;
+                  }
+                } else {
+                  print("breaking: $status");
+                  break;
+                }
+              }
+
+              if (status != true) throw Exception("Status is invalid: $status");
+              navigate(context: context, page: AccountManager());
+            }),
+            Setting(title: "Sign Out", desc: "Sign out of your account. This will not delete any of your data.", action: () async {
+              if (!(await showConfirmDialogue(context: context, title: "Are you sure?", description: "Are you sure you want to sign out?") ?? false)) return;
+              showSnackBar(context, "Loading...");
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              prefs.remove("session");
+              reinit(debug: widget.debug, kiosk: widget.kiosk);
             }),
             Column(
               children: [

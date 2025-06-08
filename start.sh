@@ -12,6 +12,7 @@ limit=10
 args=()
 debug=false
 log=false
+app=false
 
 cd "$root"
 git pull
@@ -41,8 +42,8 @@ argcheck() {
 
 for arg in "$@"; do
     if [[ "$arg" == "--app" ]]; then
-        echo "Starting $app..."
-        $app
+        echo "Detected app..."
+        app=true
     fi
     if [[ "$arg" == "--debug" ]]; then
         echo "Loading debug..."
@@ -72,6 +73,11 @@ background_reset() {
 background_reset &
 bg_pid=$!
 trap "kill $bg_pid" EXIT
+
+if [ "$app" = true ]; then
+    echo "Starting $app..."
+    $app
+fi
 
 while true; do
     echo "Starting $script... (index: $count) (command: $script $arginput)"

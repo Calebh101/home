@@ -4,7 +4,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:homeapp/login.dart';
+import 'package:homeapp/account.dart';
 import 'package:homeapp/main.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -27,17 +27,21 @@ String getBaseUrl({Host? host, bool websocket = false}) {
 }
 
 bool isInvalidPasswordResponse(http.Response response, Map body) {
-  return response.statusCode == 403 && body["code"] == "ATV x1";
+  return response.statusCode == 403 && (body["code"] == "ATV x1" || body["code"] == "ATV x3");
 }
 
 Future<Map?> request({required String endpoint, Map<String, String>? headers, Map? body, BuildContext? context, String action = "complete action", Host? host, bool showError = true, bool silentLogging = false}) async {
   String baseurl = getBaseUrl(host: host);
   SharedPreferences prefs = await SharedPreferences.getInstance();
-  headers ??= {'Content-Type': 'application/json', 'authentication': prefs.getString("accessCode") ?? "null"};
+  String authCode = prefs.getString("session") ?? "null";
+
+  headers ??= {};
+  headers["authentication"] ??= authCode;
+  headers["Content-Type"] ??= "application/json";
   body ??= {};
 
   Uri url = Uri.parse("$baseurl/api/$endpoint");
-  if (silentLogging == false || verbose) print("request: requesting url $url with body $body");
+  if (silentLogging == false || verbose) print("request: requesting url $url with body $body and auth $authCode");
 
   try {
     http.Response response = await http.post(
@@ -73,34 +77,39 @@ Future<Map?> request({required String endpoint, Map<String, String>? headers, Ma
   return null;
 }
 
-Future<List> getGlucose({BuildContext? context, bool? sandbox}) async {
-  print("getting glucose");
-  sandbox ??= globalDebug;
+Future<List?> getGlucose({BuildContext? context, bool? sandbox}) async {
+  try {
+    print("getting glucose");
+    sandbox ??= globalDebug;
 
-  if (sandbox) {
-    final int now = DateTime.now().millisecondsSinceEpoch - 5000;
-    final List trends = ["Flat", "FortyFiveUp", "FortyFiveDown", "SingleUp", "SingleDown", "DoubleUp", "DoubleDown", "None", "NonComputable"];
-    
-    List readings = [];
-    
-    for (int i = 0; i < 12; i++) {
-      var random = Random();
-      int value = 40 + random.nextInt(221);
-      int timestamp = now - (i * 5 * 60 * 1000);
-      String trend = trends[random.nextInt(trends.length)];
+    if (sandbox) {
+      final int now = DateTime.now().millisecondsSinceEpoch - 5000;
+      final List trends = ["Flat", "FortyFiveUp", "FortyFiveDown", "SingleUp", "SingleDown", "DoubleUp", "DoubleDown", "None", "NonComputable"];
       
-      readings.add({
-        "WT": "Date($timestamp)",
-        "ST": "Date($timestamp)",
-        "DT": "Date($timestamp-0500)",
-        "Value": value,
-        "Trend": trend,
-      });
+      List readings = [];
+      
+      for (int i = 0; i < 12; i++) {
+        var random = Random();
+        int value = 40 + random.nextInt(221);
+        int timestamp = now - (i * 5 * 60 * 1000);
+        String trend = trends[random.nextInt(trends.length)];
+        
+        readings.add({
+          "WT": "Date($timestamp)",
+          "ST": "Date($timestamp)",
+          "DT": "Date($timestamp-0500)",
+          "Value": value,
+          "Trend": trend,
+        });
+      }
+      
+      return readings;
+    } else {
+      return (await request(endpoint: "dexcom/get", showError: false, context: context, action: "fetch glucose", silentLogging: true))!["data"];
     }
-    
-    return readings;
-  } else {
-    return (await request(endpoint: "dexcom/get", showError: false, context: context, action: "fetch glucose", silentLogging: true))!["data"];
+  } catch (e) {
+    warn("dexcom: $e");
+    return null;
   }
 }
 
@@ -184,10 +193,15 @@ void dexcomSetup() async {
   bool isProcessing = false;
   List? previousData;
 
+  if (dexcomCrash == true || dexcomTimer == null) {
+    dexcomCrash = false;
+  } else {
+    return;
+  }
+
   dexcomTimer = Timer.periodic(Duration(seconds: 1), (Timer timer) async {
     if (dexcomController.isClosed || dexcomCrash) {
-      warn("dexcom controller closed");
-      timer.cancel();
+      if (verbose) warn("dexcom controller closed");
       return;
     }
 
@@ -203,7 +217,8 @@ void dexcomSetup() async {
 
         try {
           (() async {
-            List data = await getGlucose(sandbox: false);
+            List? data = await getGlucose(sandbox: false);
+            if (data == null) return;
             dexcomController.add(data);
             previousData = data;
           })();
@@ -237,11 +252,13 @@ StreamController tempController = StreamController.broadcast();
 io.Socket? stateSocket;
 
 Future<void> stateInputter() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
   int port = (await request(endpoint: 'system/status'))!["socket"]["port"];
   String url = '${getBaseUrl(websocket: true)}:$port';
   print("building socket... (url: $url)");
 
   io.Socket socket = io.io(url, io.OptionBuilder()
+    .setExtraHeaders({"authentication": prefs.getString("session")})
     .setTransports(['websocket'])
     .setPath('/state')
     .build());
@@ -254,7 +271,7 @@ Future<void> stateInputter() async {
   });
 
   socket.on('update', (data) {
-    if (verbose) print("socket update: ${data.runtimeType}");
+    if (data.containsKey("error")) return warn("state stream error: ${data["error"]}");
     stateController.sink.add({
       "music": data["app"]["music"],
       "state": data,

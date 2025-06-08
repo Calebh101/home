@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'web.dart' as web;
 
 import 'package:flutter/foundation.dart';
@@ -52,6 +53,7 @@ List? calendarEventsTotal;
 String? currentCalendarList;
 List? calendarLists;
 bool refreshingCalendar = false;
+Name? name;
 
 Map tabs = {
   "Home": {
@@ -68,6 +70,17 @@ Map tabs = {
     "icon": Icons.av_timer,
   },
 };
+
+class Name {
+  final String first;
+  final String last;
+  const Name(this.first, this.last);
+
+  @override
+  String toString() {
+    return "$first $last";
+  }
+}
 
 Future<void> updateHomekit() async {
   refreshingHomekit = true;
@@ -127,6 +140,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   StreamSubscription? updateStream;
   bool remotenightmode = false;
   int activeSlider = 0;
+  bool loadStateStream = true;
 
   @override
   void initState() {
@@ -279,6 +293,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       }
 
       initPrompt("Setting variables...");
+      Map? limits = await request(endpoint: 'system/limits', context: context);
+      Map? nameData = await request(endpoint: 'user/info', context: context);
+
       remotefireplaces = (await request(endpoint: "fireplace/get/available", context: context))!["fireplaces"];
       tvs = (await request(endpoint: "devices/tvs"))!["devices"];
       rooms = (await request(endpoint: "devices/house"))!["rooms"];
@@ -286,12 +303,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       vizioapps = (await request(endpoint: "devices/tvs/vizio/apps/get"))!["apps"];
       viziofavapps = (await request(endpoint: "devices/tvs/vizio/apps/favorites"))!["apps"];
       calendarLists = (await request(endpoint: "calendar/lists"))!["lists"];
-
-      Map? limits = await request(endpoint: 'system/limits', context: context);
-      bool loadStateStream = true;
+      name = Name(nameData?["firstName"], nameData?["lastName"]);
 
       try {
-        await stateController.stream.first.timeout(Duration(seconds: 20));
+        Map firstData = await stateController.stream.first.timeout(Duration(seconds: 20));
       } catch (e) {
         warn("stateController.first error: $e");
         initPrompt("stateController.first: $e");
@@ -322,6 +337,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       try {
         print("initializing state stream...");
         initPrompt("Initializing state stream...");
+        if (loadStateStream == false) throw Exception("State stream is not to be loaded.");
 
         stateStream = stateController.stream.listen((data) {
           try {
@@ -484,7 +500,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
           ],
         ),
       );
-    } else if (!nightMode && ready != null) {
+    } else if (!nightMode && ready != null && loadStateStream) {
       return Scaffold(
         appBar: AppBar(
           centerTitle: true,
@@ -559,12 +575,18 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
           children: [
             DashboardSection(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Column(
                   children: [
-                    Icon(Icons.home_rounded, size: 56, color: getThemeColor(context)),
-                    SizedBox(width: 6),
-                    Text("Welcome Home", style: TextStyle(fontSize: 48)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.home_rounded, size: 56, color: getThemeColor(context)),
+                        SizedBox(width: 6),
+                        Text("Welcome Home${name != null ? "," : ""}", style: TextStyle(fontSize: 48)),
+                      ],
+                    ),
+                    if (name != null)
+                    Text("$name", style: TextStyle(fontSize: 34)),
                   ],
                 ),
                 ...List.generate(alerts.length, (int index) {

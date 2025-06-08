@@ -1,10 +1,13 @@
-const { print, warn, configdir, serverdir, sendEmail, debug } = require('./localpkg.cjs');
+const { print, warn, configdir, serverdir, sendEmail, debug, isLocalHost } = require('./localpkg.cjs');
 const { readFile, writeFile } = require('fs/promises');
 const fs = require('fs');
 const bcrypt = require('bcrypt');
 const uuidpkg = require('uuid');
 const axios = require('axios');
+const limiter = require('express-rate-limit');
 
+const ignoreLocalHost = true;
+const ignorePassword = true;
 const salts = 10;
 const file = serverdir + "/accounts.json";
 const args = require('minimist')(process.argv.slice(2));
@@ -14,6 +17,11 @@ if (!fs.existsSync(file)) {
     fs.writeFileSync(file, JSON.stringify({"sessions": [], "users": []}), { flag: 'wx' });
 }
 
+if (fs.readFileSync(file) == "") {
+    warn("correcting " + file);
+    saveAuthData({});
+}
+
 (() => {
     const data = getAuthData();
     data.sessions ??= [];
@@ -21,10 +29,25 @@ if (!fs.existsSync(file)) {
     saveAuthData(data);
 })();
 
+const harshlimit = limiter({
+    windowMs: 30 * 60 * 1000,
+    max: 3,
+    message: 'Too many requests, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 async function filterSessions() {
-    const data = await getAuthDataAsync();
+    var data;
+    try {
+        data = await getAuthDataAsync();
+    } catch (e) {
+        warn("authData: " + e);
+        data = {};
+    }
     data.sessions = data.sessions.filter(session => {
-        const status = new Date(session.created).getTime() >= Date.now() - 10 * 60 * 1000 && session.active == false;
+        var user = getUserById(session.user);
+        var status = user != null && user.email == session.email && ((new Date(session.created).getTime() >= Date.now() - 30 * 60 * 1000 && session.active == false) || session.active == true);
         if (status == false) print("removing session " + session.id);
         return status;
     });
@@ -42,15 +65,15 @@ async function verify(req) {
         return {"status": true, "reason": null};
     }
 
-    if (isLocalHost(req)) {
+    if (isLocalHost(req) && ignoreLocalHost == false) {
         print("verify client: (isLocal) = true");
         return {"status": true, "reason": null};
     }
 
     const sessionCode = req.headers["authentication"];
-    const password = req.headers["password"];
-    const status = getSession(req.body.id) != null && password == process.env.PASSWORD;
-    const log = "verify client: (session code: " + sessionCode + ") (password match: " + (password == process.env.PASSWORD) + ") = " + status;
+    const password = req.headers["X-Authentication-Value"];
+    const status = getSession(sessionCode) != null && (password == process.env.ACCESS_CODE || ignorePassword);
+    const log = "verify client: (session code: " + sessionCode + ") (password match: " + (password == process.env.ACCESS_CODE || ignorePassword) + ") = " + status;
 
     if (status) {
         print(log);
@@ -64,8 +87,8 @@ async function verify(req) {
 async function verifySocket(handshake) {
     const sessionCode = handshake.headers["authentication"];
     const password = handshake.headers["password"];
-    const status = getSession(req.body.id) != null && password == process.env.PASSWORD;
-    const log = "verify client: (session code: " + sessionCode + ") (password match: " + (password == process.env.PASSWORD) + ") = " + status;
+    const status = getSession(sessionCode) != null && (password == process.env.ACCESS_CODE || ignorePassword);
+    const log = "verify socket: (session code: " + sessionCode + ") (password match: " + (password == process.env.ACCESS_CODE || ignorePassword) + ") = " + status;
 
     if (status) {
         print(log);
@@ -95,7 +118,7 @@ async function compareHashes(password, hash) {
 async function checkUser(user, password) {
     const compare = await compareHashes(password, user.password);
     const status = compare && user.active == true;
-    print("checkUser: (match: " + compare + ") (active: " + user.active + ") = " + status);
+    print("checkUser: (match: " + compare + ") (active: " + user.active + ") = " + status + " (input: " + password + ")");
     return status;
 }
 
@@ -131,7 +154,7 @@ async function addSession(user, ip, agent) {
         "user": user.id,
         "active": false,
         "created": new Date().toISOString(),
-        "verificationCode": uuid(),
+        "verificationCode": Math.random().toString(36).substring(2, 8),
         "location": {
             "city": city,
             "region": region,
@@ -140,17 +163,19 @@ async function addSession(user, ip, agent) {
         "device": {
             "agent": agent,
         },
+        "email": user.email,
     };
-    
+
+    print("saving session " + id);
     const data = getAuthData();
     data.sessions.push(session);
     saveAuthData(data);
     return session;
 }
 
-function verifySession(id) {
+function verifySession(id, status = true) {
     const data = getAuthData();
-    data.sessions.find(item => item.id == id).active = true;
+    data.sessions.find(item => item.id == id).active = status;
     saveAuthData(data);
     return true;
 }
@@ -159,10 +184,12 @@ function changeUserPassword(id, password) {
     if (getUserById(id) == null) return false;
     const data = getAuthData();
     data.users.find(item => item.id == id).password = encryptPassword(password);
+    saveAuthData(data);
     return true;
 }
 
-async function addUser(email, password) {
+async function addUser(email, password, firstName, lastName) {
+    if (getUserByEmail(email) != null) return null;
     var id = uuid();
 
     while (true) {
@@ -176,9 +203,16 @@ async function addUser(email, password) {
     const user = {
         "id": id,
         "email": email,
-        "password": encryptPassword(password),
-        "active": true,
+        "password": await encryptPassword(password),
+        "firstName": firstName,
+        "lastName": lastName,
+        "active": false,
     };
+
+    const data = getAuthData();
+    data.users.push(user);
+    saveAuthData(data);
+    return user;
 }
 
 function getAuthData() {
@@ -211,32 +245,57 @@ function routes() {
     const router = express.Router();
 
     router.post("/login", async (req, res) => {
-        if (!validateString(req.body.email) || !validateString(req.body.password)) return res.status(400).json({"error": "invalid input"});
+        if (!validateString(req.body.email) || !validateString(req.body.password)) return res.status(403).json({"error": "invalid input", "message": "Invalid email or password."});
         const user = getUserByEmail(req.body.email);
-        if (user == null) return res.status(403).json({"error": "invalid username"});
+        if (user == null) return res.status(403).json({"error": "invalid username", "message": "Invalid username or password."});
         if (!(await checkUser(user, req.body.password))) return res.status(403).json({"error": "invalid password"});
         print("ip: " + req.ip);
+        const minutes = 2;
+        if (getAuthData().sessions.find(item => item.user == user.id && new Date(item.created).getTime() >= Date.now() - minutes * 60 * 1000 && item.active == false) != null) return res.status(403).json({"error": "too soon", "message": "Please wait at least " + minutes + " minutes before requesting another code."});
         const session = await addSession(user, req.ip, req.headers['user-agent']);
         const location = (session.location.city ?? "Unknown") + ", " + (session.location.region ?? "Unknown") + ", " + (session.location.country ?? "Unknown");
-        const url = (debug ? "http://localhost" : "https://home.calebh101.com") + "/auth/verifyPage?id=" + session.verificationCode + "&location=" + encodeURIComponent(location) + "&agent=" + encodeURIComponent(session.device.agent) + "&debug=" + (debug ? 1 : 0);
-        print("sending url: " + url);
-        sendEmail(req.body.email, "Verify Your Login", "<p>Someone is trying to log in to your account, and we want to verify if it's you or not.</p><br><ul><li>Location: " + location + "</li><li>Device: " + session.device.agent + "</li></ul><br><p><a href=\"" + url + "\">Click here to approve the request.</a></p>");
+        const name = [user.firstName, user.lastName].join(" ");
+        print("name: " + name);
+        sendEmail(req.body.email, "Verify Your Login for " + name, "<h2>Verify Your Login for " + name + "</h2><p>Someone is trying to log into your account, and we want to verify if it's you or not.</p><br><ul><li>Name: " + name + "</li><li>Location: " + location + "</li><li>Device: " + session.device.agent + "</li></ul><br><p>Please enter this code into your app: <b>" + session.verificationCode + "</b></p><p>If this is not you, please change your password.</p>");
         return res.status(200).json({"success": "email sent"});
     });
 
     router.post("/approve", async (req, res) => {
-        const code = req.query.id;
+        if (req.body.code == null) return res.status(403).json({"error": "no code", "message": "Invalid code."});
+        const code = req.body.code.toLowerCase();
         print("received approve code: " + code);
-        const session = getAuthData().sessions.find(item => item.verificationCode == code && item.active == false);
-        if (session == null) return res.status(403).json({"error": "invalid code"});
-        if (new Date(session.created).getTime() < Date.now() - 10 * 60 * 1000) res.status(403).json({"error": "expired code"});
-        verifySession(session.id);
-        return res.status(200).json({"success": "true"});
+        const session = getAuthData().sessions.find(item => item.verificationCode.toLowerCase() == code && item.active == false);
+        if (session == null) return res.status(403).json({"error": "invalid code", "message": "Invalid code."});
+        if (new Date(session.created).getTime() < Date.now() - 10 * 60 * 1000) return res.status(403).json({"error": "expired code", "message": "Your code has expired. Please try again."});
+        print("verifying session");
+        verifySession(session.id, true);
+        print("success: " + session.id);
+        return res.status(200).json({"success": "", "id": session.id});
     });
 
-    router.get("/verifyPage", (req, res) => {
-        res.sendFile(serverdir + "/sessionverify.html");
+    // id: session
+    // password: current password
+    // new: new password
+
+    router.post("/changePassword", async (req, res) => {
+        if (!validateString(req.body.id) || !validateString(req.body.password) || !validateString(req.body.new)) return res.status(400).json({"error": "invalid parameters"});
+        const session = getSession(req.body.id);
+        if (session == null) return res.status(403).json({"error": "invalid session"});
+        const user = getUserById(session.user);
+        if (user == null) return res.status(403).json({"error": "invalid user"});
+        if (!(await checkUser(user, req.body.password))) return res.status(403).json({"error": "invalid password"});
+        await changeUserPassword(user.id, req.body.new);
+        const data = getAuthData();
+        data.sessions = data.sessions.filter(item => item.user != user.id || item.id == session.id);
+        saveAuthData(data);
+        return res.status(200).json({"success": "password reset"});
     });
+
+    router.post("/addUser", async (req, res) => {
+        if (!validateString(req.body.email) || !validateString(req.body.password) || !validateString(req.body.firstName) || !validateString(req.body.lastName)) return res.status(403).json({"error": "invalid parameters"});
+        const user = await addUser(req.body.email, req.body.password, req.body.firstName, req.body.lastName);
+        res.status(200).json({"message": "Your user has been created. You will need to wait for your user to be activated to use it. Your user may be removed if it is not valid."});
+    }, harshlimit);
 
     print("generated auth routes");
     return router;
@@ -247,4 +306,13 @@ module.exports = {
     routes,
     verifySocket,
     filterSessions,
+    getSession,
+    validateString,
+    getUserByEmail,
+    getUserById,
+    checkUser,
+    getAuthData,
+    saveAuthData,
+    getAuthDataAsync,
+    saveAuthDataAsync,
 };

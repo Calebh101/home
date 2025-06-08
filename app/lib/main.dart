@@ -65,8 +65,8 @@ int? timeBuffer;
 bool dexcomCrash = false;
 Map updateData = {};
 
-Color? getSeed(BuildContext context) {
-  return getBrightness(context: context) == Brightness.light ? Colors.orange : Colors.deepOrange;
+Color getSeed(BuildContext context, {Brightness? brightness}) {
+  return (brightness ?? getBrightness(context: context)) == Brightness.light ? Colors.orange : Colors.deepOrange;
 }
 
 enum Mode {
@@ -133,7 +133,6 @@ void main(List args, {bool debug = kDebugMode, bool kiosk = false}) {
   }
 
   print("setting up initializers...");
-  dexcomSetup();
   stateInputter();
   taskquarter();
   registerDialogues();
@@ -146,12 +145,10 @@ void main(List args, {bool debug = kDebugMode, bool kiosk = false}) {
     HttpOverrides.global = CustomHttpOverrides();
   }
 
-  print("running app... (kiosk: $kiosk, debug: $debug)", releaseMode: true);
-  runApp(HomeApp(debug: debug, kiosk: kiosk));
-
   loopTimerSetup();
   socket();
   tempMonitor();
+  reinit(debug: debug, kiosk: kiosk);
 
   stateController.stream.listen((data) {
     announcements = data["state"]["announcements"];
@@ -161,19 +158,6 @@ void main(List args, {bool debug = kDebugMode, bool kiosk = false}) {
     updateTvStates();
     updateHomekit();
   });
-
-  (() async {
-    try {
-      print("registering glucose limits...");
-      Map value = (await request(endpoint: "system/limits"))!["glucose"];
-      globalGlucoseLimits = value;
-      timeBuffer = globalGlucoseLimits?["timeBuffer"];
-      print("registered glucose limits: $globalGlucoseLimits");
-    } catch (e) {
-      warn("register glucose limits: $e");
-      dexcomCrash = true;
-    }
-  })();
 
   if (!debug) {
     window(active: kiosk);
@@ -187,6 +171,24 @@ class CustomHttpOverrides extends HttpOverrides {
     client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
     return client;
   }
+}
+
+void reinit({required bool debug, required bool kiosk}) {
+  dexcomSetup();
+  runApp(HomeApp(debug: debug, kiosk: kiosk));
+
+  (() async {
+    try {
+      print("registering glucose limits...");
+      Map value = (await request(endpoint: "system/limits"))!["glucose"];
+      globalGlucoseLimits = value;
+      timeBuffer = globalGlucoseLimits?["timeBuffer"];
+      print("registered glucose limits: $globalGlucoseLimits");
+    } catch (e) {
+      warn("register glucose limits: $e");
+      dexcomCrash = true;
+    }
+  })();
 }
 
 Future<Map> checkForUpdates() async {
@@ -354,8 +356,8 @@ class HomeApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Home',
-      theme: brandTheme(seedColor: getSeed(context) ?? Colors.red, customFont: GoogleFonts.robotoTextTheme()),
-      darkTheme: brandTheme(seedColor: getSeed(context) ?? Colors.red, customFont: GoogleFonts.robotoTextTheme(), darkMode: true, backgroundColor: const Color.fromARGB(255, 15, 15, 15)),
+      theme: brandTheme(seedColor: getSeed(context), customFont: GoogleFonts.robotoTextTheme()),
+      darkTheme: brandTheme(seedColor: getSeed(context), customFont: GoogleFonts.robotoTextTheme(), darkMode: true, backgroundColor: const Color.fromARGB(255, 15, 15, 15)),
       themeMode: themeMode,
       home: Dashboard(kiosk: kiosk, debug: debug),
     );

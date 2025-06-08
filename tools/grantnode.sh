@@ -13,8 +13,8 @@ xset +dpms
 echo "Granted node required permissions"
 echo ""
 
-echo -e "brightnessctl needs elevated privileges to run properly. To give it these elevated privileges, run \"sudo visudo\" and add the following line:\ncaleb ALL=(ALL) NOPASSWD: /usr/bin/brightnessctl"
+echo -e "brightnessctl needs elevated privileges to run properly. To give it these elevated privileges, run \"sudo visudo\" and add the following line:\n\tcaleb ALL=(ALL) NOPASSWD: /usr/bin/brightnessctl"
 echo ""
-echo -e "npm needs elevated privileges to update dependencies in the background. To give it these elevated privileges, run \"sudo visudo\" and add the following line:\ncaleb ALL=(ALL) NOPASSWD: npm"
+echo -e "npm needs elevated privileges to update dependencies in the background. To give it these elevated privileges, run \"sudo visudo\" and add the following line:\n\tcaleb ALL=(ALL) NOPASSWD: /usr/bin/npm"
 echo ""
-echo -e "User 'caleb' needs to be in the \"video\" group to execute brightnessctl. Run this line of code in a new shell:\nnewgrp video"
+echo -e "User 'caleb' needs to be in the \"video\" group to execute brightnessctl. Run this line of code in a new shell:\n\tnewgrp video"
