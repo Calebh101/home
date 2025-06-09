@@ -5,7 +5,7 @@ root="/var/www/home"
 serverdir="$root/server"
 
 script="$root/server/server.js"
-app="$root/tools/backgroundapp.sh"
+appfile="$root/tools/backgroundapp.sh"
 logfile="$root/logs/server.log"
 
 limit=10
@@ -75,8 +75,8 @@ bg_pid=$!
 trap "kill $bg_pid" EXIT
 
 if [ "$app" = true ]; then
-    echo "Starting $app..."
-    $app
+    echo "Starting $appfile..."
+    $appfile
 fi
 
 while true; do
