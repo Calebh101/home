@@ -225,7 +225,6 @@ function getAuthData() {
 }
 
 function saveAuthData(data) {
-    if (data.users != null && data.users.length <= 0) throw new Error("Data has " + data.users.length + " users!");
     fs.writeFileSync(file, JSON.stringify(data, null, 4));
 }
 
