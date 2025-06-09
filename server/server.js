@@ -1,5 +1,5 @@
 const line = "----------------------------------------";
-const { print, warn, log, command, buildAppCommand, getClient, getConfig, debug, version, configdir, serverdir, notfound, dotenv, stringToBool, activateSpotify, getData, saveData, reloadAllDatabases, isLocalClient, isLocalHost } = require('./localpkg.cjs');
+const { print, warn, log, command, buildAppCommand, getClient, getConfig, debug, version, configdir, serverdir, notfound, dotenv, stringToBool, activateSpotify, getData, saveData, reloadAllDatabases, isLocalClient, isLocalHost, updateIp } = require('./localpkg.cjs');
 dotenv();
 
 const addr = '0.0.0.0';
@@ -29,6 +29,7 @@ let httpsserver;
 
 print("starting server... (https: " + secure + ")");
 require('./socket').init();
+updateIp();
 
 try {
   getData();
@@ -97,7 +98,7 @@ app.use(async (req, res, next) => {
 print("generating routes...");
 app.use('/auth', auth.routes());
 app.use('/api', require('./api.js'));
-app.use('/public', require('./public.api.js'));
+app.use('/public/weather', (req, res) => res.status(310).json({"error": "deprecated"}));
 app.use(express.static(wwwroot));
 app.use(notfound);
 
@@ -120,7 +121,7 @@ async function cmiddle(req, res, next) {
   const stringifiedOut= "outgoing serve: " + req.method + " " + req.url + "\nheaders: " + JSON.stringify(res.getHeaders());
 
   print("middleware called");
-  print("request: " + req.method + ":" + req.protocol + " from " + client);
+  print("request: " + req.method + ":" + req.protocol + "/" + req.path + " from " + client);
   log("incoming request from " + client + ": " + stringifiedIn);
 
   if (secure === true) {

@@ -294,7 +294,7 @@ Future<Map?> request({required String endpoint, Map<String, String>? headers, Ma
   String baseurl = getBaseUrl();
   headers ??= {'Content-Type': 'application/json'};
   body ??= {};
-  body["auth"] = dotenv.DotEnv().env["ACCESS_CODE"];
+  body["dashboard-auth"] = dotenv.DotEnv().env["ACCESS_CODE"];
 
   Uri url = Uri.parse("$baseurl/public/$endpoint");
   if (silentLogging == false || verbose) print("request: requesting url $url with body $body");

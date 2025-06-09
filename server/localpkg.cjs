@@ -4,6 +4,7 @@ const Path = require('path');
 const { exec, spawn } = require('child_process');
 const { Client } = require('@notionhq/client');
 const nodemailer = require('nodemailer');
+const axios = require('axios');
 
 const configdir = "/var/www/home";
 const serverdir = configdir + "/server";
@@ -471,6 +472,23 @@ function isLocalHost(req) {
   return client == "localhost" || client == "127.0.0.1" || client == "::1";
 }
 
+function updateIp() {
+  print("finding ip...");
+  let ipAddress = null;
+
+  axios.get('https://api.ipify.org?format=json').then(res => {
+    const data = res.data;
+    print("got ip data: " + JSON.stringify(data));
+    ipAddress = data.ip;
+  }).catch(e => {
+    warn("couldn't get ip: " + e);
+  });
+}
+
+function getIp() {
+  return ipAddress;
+}
+
 module.exports = {
   version,
   debug,
@@ -496,4 +514,6 @@ module.exports = {
   parseNumber,
   isLocalHost,
   sendEmail,
+  updateIp,
+  getIp,
 };

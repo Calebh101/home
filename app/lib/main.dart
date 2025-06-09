@@ -45,7 +45,7 @@ bool useAutomation = false;
 bool useLocalHost = false;
 
 Mode mode = Mode.auto;
-Host? defaultHost = Host.debug;
+Host? defaultHost = Host.release;
 Host? serverHost;
 ThemeMode defaultKioskThemeMode = ThemeMode.dark; // experimental
 
@@ -64,6 +64,7 @@ Map? globalGlucoseLimits;
 int? timeBuffer;
 bool dexcomCrash = false;
 Map updateData = {};
+String? sessionCode;
 
 Color getSeed(BuildContext context, {Brightness? brightness}) {
   return (brightness ?? getBrightness(context: context)) == Brightness.light ? Colors.orange : Colors.deepOrange;
@@ -80,7 +81,7 @@ Never test() {
   return exit(0);
 }
 
-void main(List args, {bool debug = kDebugMode, bool kiosk = false}) {
+void main(List args, {bool debug = kDebugMode, bool kiosk = false}) async {
   if (args.contains("--test")) {
     print("detected test mode from arg");
     globalTest = true;
@@ -136,6 +137,7 @@ void main(List args, {bool debug = kDebugMode, bool kiosk = false}) {
   stateInputter();
   taskquarter();
   registerDialogues();
+  await updateSession();
 
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
@@ -841,4 +843,10 @@ void CrashReport({required BuildContext context, String title = "Unexpected Erro
         break;
     }
   });
+}
+
+Future<String?> updateSession() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  sessionCode = prefs.getString("session");
+  return sessionCode;
 }

@@ -1,4 +1,4 @@
-const { print, warn, configdir, serverdir, sendEmail, debug, isLocalHost } = require('./localpkg.cjs');
+const { print, warn, configdir, serverdir, sendEmail, debug, isLocalHost, getIp } = require('./localpkg.cjs');
 const { readFile, writeFile } = require('fs/promises');
 const fs = require('fs');
 const bcrypt = require('bcrypt');
@@ -6,8 +6,8 @@ const uuidpkg = require('uuid');
 const axios = require('axios');
 const limiter = require('express-rate-limit');
 
-const ignoreLocalHost = true;
-const ignorePassword = true;
+const ignoreLocalHost = debug;
+const ignorePassword = debug;
 const salts = 10;
 const file = serverdir + "/accounts.json";
 const args = require('minimist')(process.argv.slice(2));
@@ -19,7 +19,7 @@ if (!fs.existsSync(file)) {
 
 if (fs.readFileSync(file) == "") {
     warn("correcting " + file);
-    saveAuthData({});
+    saveAuthData({"sessions": [], "users": []});
 }
 
 (() => {
@@ -40,7 +40,7 @@ const harshlimit = limiter({
 async function filterSessions() {
     var data;
     try {
-        data = await getAuthDataAsync();
+        data = getAuthData();
     } catch (e) {
         warn("authData: " + e);
         data = {};
@@ -51,12 +51,17 @@ async function filterSessions() {
         if (status == false) print("removing session " + session.id);
         return status;
     });
-    await saveAuthDataAsync(data);
+    saveAuthData(data);
 }
 
 async function verify(req) {
     if (!req.path.startsWith("/api")) {
         print("verify client: (path: " + req.path + ") = true");
+        return {"status": true, "reason": null};
+    }
+
+    if (req.headers["dashboard-auth"] == process.env.DASHBOARD_CODE && getIp() != null && getIp() == req.ip) {
+        print("verify client: (dashboard-auth: true) (ip match: true) = true");
         return {"status": true, "reason": null};
     }
 
@@ -219,16 +224,9 @@ function getAuthData() {
     return JSON.parse(fs.readFileSync(file));
 }
 
-async function getAuthDataAsync() {
-    return JSON.parse(await readFile(file));
-}
-
 function saveAuthData(data) {
+    if (data.users != null && data.users.length <= 0) throw new Error("Data has " + data.users.length + " users!");
     fs.writeFileSync(file, JSON.stringify(data, null, 4));
-}
-
-async function saveAuthDataAsync(data) {
-    return await writeFile(file, JSON.stringify(data, null, 4));
 }
 
 async function encryptPassword(password) {
@@ -313,6 +311,5 @@ module.exports = {
     checkUser,
     getAuthData,
     saveAuthData,
-    getAuthDataAsync,
-    saveAuthDataAsync,
+    verifySession,
 };

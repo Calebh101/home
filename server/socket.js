@@ -203,7 +203,7 @@ async function init() {
 
         controller.on('data', (data) => {
             print("controller data: " + JSON.stringify(data));
-            if (data.id == id) socket.emit("update", {"action": data.command});
+            if (data.id == id) socket.emit("update", {"action": data.command, "data": data.data ?? {}});
         });
 
         socket.on("update", (c) => {

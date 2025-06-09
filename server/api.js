@@ -7,7 +7,7 @@ const nodemailer = require('nodemailer');
 const axios = require('axios');
 const Path = require('path');
 const vizio = require('./vizio.js');
-const { getSession, validateString, getUserById, checkUser, getAuthData } = require('./auth.js');
+const { getSession, validateString, getUserById, checkUser, getAuthData, verifySession } = require('./auth.js');
 
 var minbrightness = 5;
 var maxvolume = getConfig().limits.maxvolume;
@@ -219,7 +219,7 @@ function verifyAdmin(req) {
         if (!(await checkUser(user, req.body.password))) return res.status(403).json({"error": "invalid password"});
 
         const sessions = getAuthData().sessions.filter(item => item.user == user.id && item.active == true).map(item => {
-			return {"created": item.created, "device": item.device, "location": item.location};
+			return {"created": item.created, "device": item.device, "location": item.location, "id": item.id};
 		});
 
         print("found " + sessions.length + " sessions for user " + user.id);
@@ -233,7 +233,7 @@ function verifyAdmin(req) {
         const user = getUserById(session.user);
         if (user == null) return res.status(403).json({"error": "invalid user"});
         if (!(await checkUser(user, req.body.password))) return res.status(403).json({"error": "invalid password"});
-        verifySession(session,id, false);
+        verifySession(session.id, false);
         return res.status(200).json({"success": "deactivated"});
     });
 })();
@@ -328,7 +328,9 @@ function verifyAdmin(req) {
 	const { handle } = require('./services/announcer');
 
 	router.post("/announce", async (req, res) => {
+		if (req.body.message == null) return res.status(400).json({"error": "invalid message"});
 		handle(req, res);
+		controller.emit("data", {"command": "announce", "data": {"message": req.body.message}});
 	});
 
 	router.post("/announce/delete", async (req, res) => {
@@ -350,6 +352,18 @@ function verifyAdmin(req) {
 	router.post("/announce/get", async (req, res) => {
 		const data = getData().announcedmessages;
 		res.status(200).json({"messages": data});
+	});
+
+	router.post("/announce/audio", async (req, res) => {
+		const file = configdir + "/temp/announce.mp3";
+		const exists = fs.existsSync(file);
+		print("sending announce.audio (file: " + file + ") (exists: " + exists + ")");
+
+		if (exists) {
+			res.sendFile(file);
+		} else {
+			res.status(404).json({"error": "no audio file exists"});
+		}
 	});
 })();
 

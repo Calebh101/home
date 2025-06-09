@@ -6,7 +6,7 @@ const { print, warn, debug, getData, saveData, moveToTop } = require('../localpk
 
 async function handle(req, res) {
     try {
-        const {message} = req.body;
+        const { message } = req.body;
         print("announce message: " + message);
     
         if (message == undefined || message == null) {

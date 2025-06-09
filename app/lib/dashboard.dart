@@ -285,6 +285,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       initPrompt("Initializing...");
       ready = false;
       refresh(mini: true);
+      updateSession();
 
       if (!(await checkStatus())) {
         ready = null;

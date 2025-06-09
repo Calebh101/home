@@ -260,15 +260,34 @@ class _SessionManagerState extends State<SessionManager> {
 
   @override
   Widget build(BuildContext context) {
-    return sessions == null ? Center(child: CircularProgressIndicator()) : ListView.builder(itemBuilder: (BuildContext context, int i) {
-      Map session = sessions![i];
-      Map location = session["location"];
-
-      return ListTile(
-        title: Text("Location: ${location["city"] ?? "Unknown"}, ${location["region"] ?? "Unknown"}, ${location["country"] ?? "Unknown"}"),
-        subtitle: Text("Created: ${DateTime.parse(session["created"]).toLocal()}"),
-      );
-    }, itemCount: sessions!.length);
+    return sessions == null ? Center(child: CircularProgressIndicator()) : Center(
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.9,
+        width: MediaQuery.of(context).size.width * 0.9,
+        child: ListView.builder(itemBuilder: (BuildContext context, int i) {
+          Map session = sessions![i];
+          Map location = session["location"];
+          print("generating session ${session["id"]}");
+        
+          return ListTile(
+            title: Text("Location: ${location["city"] ?? "Unknown"}, ${location["region"] ?? "Unknown"}, ${location["country"] ?? "Unknown"}"),
+            subtitle: Text(["Created: ${DateTime.parse(session["created"]).toLocal()}", if (session["id"] == sessionCode) "This session"].join("\n")),
+            trailing: PopupMenuButton(itemBuilder: (BuildContext context) {
+              return [
+                PopupMenuItem(child: Text("Sign Out"), value: 0),
+              ];
+            }, onSelected: (int value) async {
+              switch (value) {
+                case 0:
+                  showSnackBar(context, "Loading...");
+                  await request(endpoint: "user/deactivateSession", body: {"sessionCode": session["id"], "password": accountPassword}, context: context);
+                  refresh();
+              }
+            }),
+          );
+        }, itemCount: sessions!.length, shrinkWrap: true),
+      ),
+    );
   }
 }
 

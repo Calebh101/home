@@ -32,8 +32,7 @@ bool isInvalidPasswordResponse(http.Response response, Map body) {
 
 Future<Map?> request({required String endpoint, Map<String, String>? headers, Map? body, BuildContext? context, String action = "complete action", Host? host, bool showError = true, bool silentLogging = false}) async {
   String baseurl = getBaseUrl(host: host);
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  String authCode = prefs.getString("session") ?? "null";
+  String authCode = sessionCode ?? "null";
 
   headers ??= {};
   headers["authentication"] ??= authCode;

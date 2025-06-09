@@ -21,6 +21,7 @@
     "dbus-next": "^0.10.2",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
     "fast-speedtest-api": "^0.3.2",
     "httpolyglot": "^0.1.2",
     "minimist": "^1.2.8",
