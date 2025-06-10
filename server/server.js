@@ -120,8 +120,8 @@ async function cmiddle(req, res, next) {
   const stringifiedIn = "incoming request: " + req.method + " " + req.url + "\nheaders: " + JSON.stringify(req.headers) + "\nbody: " + JSON.stringify(req.body ?? {});
   const stringifiedOut= "outgoing serve: " + req.method + " " + req.url + "\nheaders: " + JSON.stringify(res.getHeaders());
 
-  print("middleware called");
-  print("request: " + req.method + ":" + req.protocol + "/" + req.path + " from " + client);
+  print("middleware called from " + client);
+  print("request: " + req.method + ":" + req.protocol + "/" + req.path + " from " + client + " (auth: " + req.headers["X-Authentication-Value"] + ")");
   log("incoming request from " + client + ": " + stringifiedIn);
 
   if (secure === true) {
