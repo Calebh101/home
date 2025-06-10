@@ -16,13 +16,18 @@ echo "Log file cleared!" > "$logfile"
 
 log() {
     while IFS= read -r line; do
+        echo "APP: $(date -Iseconds): $line"
         echo "$(date -Iseconds): $line" >> "$logfile"
     done
 }
 
 (
-    sleep 5
-    echo "Process starting..." | log
+    for i in {5..1}; do
+        echo "Starting app in $i..." | log
+        sleep 1
+    done
+
+    echo "Starting app now.." | log
     "$root/build/homeapp" $kioskarg 2>&1 | log
-    echo "Process complete" | log
+    echo "App process complete" | log
 ) &> /dev/null &

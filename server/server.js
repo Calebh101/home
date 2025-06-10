@@ -188,9 +188,15 @@ async function cparser(req, res, next) {
   try {
     const type = req.headers['content-type'];
     let body = '';
+
     req.on('data', (chunk) => {
       print("received raw body chunk");
       body += chunk.toString();
+    });
+
+    req.on('error', (e) => {
+      warn("parse error: " + e);
+      return res.status(400).json({"error": "invalid body"});
     });
 
     req.on('end', () => {
@@ -214,13 +220,14 @@ async function cparser(req, res, next) {
             print("unknown type: " + type);
             req.body = body;
           }
-        } else {
+        } else if (req.query != null) {
           print("received body from req.query");
-          req.body = req.query ?? {};
+          req.body = req.query;
         }
 
         if (req.body == null) {
-            req.body = {};
+          print("received no body, correcting");
+          req.body = {};
         }
 
         next();
@@ -228,6 +235,11 @@ async function cparser(req, res, next) {
         print("parse error (1): " + e);
         return res.status(400).json({ error: 'invalid body' });
       }
+    });
+
+    req.setTimeout(10000, () => {
+      print("parse error: request timeout");
+      return res.status(408).json({ error: 'request timeout' });
     });
   } catch (e) {
     print("parse error (0): " + e);
