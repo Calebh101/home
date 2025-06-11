@@ -11,6 +11,7 @@ const serverdir = configdir + "/server";
 
 // get environmental variables
 dotenv();
+let ipAddress;
 
 const version = "1.1.1A";
 const debug = stringToBool(process.env.DEBUG ?? 0);
@@ -474,7 +475,7 @@ function isLocalHost(req) {
 
 function updateIp() {
   print("finding ip...");
-  let ipAddress = null;
+  ipAddress = null;
 
   axios.get('https://api.ipify.org?format=json').then(res => {
     const data = res.data;
